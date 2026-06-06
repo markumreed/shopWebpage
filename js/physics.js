@@ -77,3 +77,10 @@ export function resolveCollision(a, b, params) {
 
   return [a2, b2];
 }
+
+export function decideOutcome(player, opponent) {
+  if (player.alive && opponent.alive) return null;
+  if (player.alive && !opponent.alive) return "player";
+  if (!player.alive && opponent.alive) return "opponent";
+  return "draw";
+}

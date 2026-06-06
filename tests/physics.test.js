@@ -81,3 +81,21 @@ test("resolveCollision drains spin from both on contact", () => {
   assert.equal(a2.spin, 45);
   assert.equal(b2.spin, 45);
 });
+
+import { decideOutcome } from "../js/physics.js";
+
+test("decideOutcome returns null while both are alive", () => {
+  assert.equal(decideOutcome(bey({ alive: true }), bey({ alive: true })), null);
+});
+
+test("decideOutcome returns 'player' when only opponent is dead", () => {
+  assert.equal(decideOutcome(bey({ alive: true }), bey({ alive: false })), "player");
+});
+
+test("decideOutcome returns 'opponent' when only player is dead", () => {
+  assert.equal(decideOutcome(bey({ alive: false }), bey({ alive: true })), "opponent");
+});
+
+test("decideOutcome returns 'draw' when both are dead", () => {
+  assert.equal(decideOutcome(bey({ alive: false }), bey({ alive: false })), "draw");
+});
