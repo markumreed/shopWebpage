@@ -1,1 +1,58 @@
-/* arena.css — arena styling (filled in Task 11) */
+/* Arena (style C: neon) + transformation from shop */
+
+/* Transformation: when battling, shake + dim the shop behind the overlay */
+body.battling { overflow: hidden; }
+body.battling #shop,
+body.battling .topbar { filter: brightness(.25) saturate(.4); transition: filter .5s; }
+
+@keyframes screen-shake {
+  0%,100% { transform: translate(0,0); }
+  20% { transform: translate(-8px, 6px); }
+  40% { transform: translate(7px, -7px); }
+  60% { transform: translate(-6px, -5px); }
+  80% { transform: translate(6px, 7px); }
+}
+.shake { animation: screen-shake .45s linear; }
+
+/* Overlay */
+.arena {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  background: radial-gradient(circle at 50% 30%, #1a1140, #07060f 70%);
+  color: #eaf7ff;
+}
+.arena[hidden] { display: none; }
+
+.arena-hud { position: absolute; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between; padding: 16px 22px; }
+.arena-title { font-family: var(--display, sans-serif); font-style: italic; text-transform: uppercase;
+  font-size: 28px; letter-spacing: 2px; text-shadow: 0 0 16px #ff2bd6, 0 0 30px #2bf2ff; }
+.arena-title span { color: #2bf2ff; }
+.arena-exit { background: transparent; border: 1.5px solid #2bf2ff; color: #2bf2ff; padding: 8px 14px;
+  font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 0 0 14px rgba(43,242,255,.5); }
+.arena-exit:hover { background: #2bf2ff; color: #07060f; }
+
+.arena-canvas { width: min(72vmin, 720px); height: min(72vmin, 720px);
+  border-radius: 50%; box-shadow: 0 0 60px rgba(43,242,255,.35), inset 0 0 80px rgba(255,43,214,.25);
+  background: #0a0a16; }
+
+.arena-controls { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; justify-content: center; }
+.ctrl { display: flex; flex-direction: column; align-items: center; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; gap: 6px; }
+.ctrl input[type=range] { width: 160px; accent-color: #2bf2ff; }
+
+.power-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.power-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+.power-track { width: 160px; height: 14px; background: #15122b; border: 1px solid #2bf2ff; overflow: hidden; }
+.power-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #2bf2ff, #ff2bd6); }
+
+.btn-launch { background: #ff2bd6; color: #07060f; border: 0; padding: 14px 22px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 1px; cursor: pointer; box-shadow: 0 0 22px rgba(255,43,214,.6); }
+.btn-launch:active { transform: scale(.97); }
+.btn-launch:disabled { opacity: .5; cursor: default; box-shadow: none; }
+
+.arena-banner { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none;
+  font-family: var(--display, sans-serif); font-style: italic; text-transform: uppercase;
+  font-size: clamp(48px, 12vw, 140px); color: #fff;
+  text-shadow: 0 0 24px #ff2bd6, 0 0 48px #2bf2ff; animation: banner-pop .4s ease-out; }
+.arena-banner[hidden] { display: none; }
+@keyframes banner-pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
