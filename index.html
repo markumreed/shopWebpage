@@ -11,9 +11,90 @@
   <link rel="stylesheet" href="css/arena.css" />
 </head>
 <body>
+  <!-- Hidden arena trigger: disguised "do not press" button -->
+  <button id="red-button" class="red-button" aria-label="Do not press">
+    <span class="rb-cap"></span>
+    <span class="rb-label">DO&nbsp;NOT&nbsp;PRESS</span>
+  </button>
+
+  <header class="topbar">
+    <div class="brand">SPIN<span>SUSHI</span></div>
+    <nav class="nav">
+      <a href="#menu">Menu</a>
+      <a href="#about">Story</a>
+      <button id="cart-toggle" class="cart-toggle" aria-label="Open cart">
+        Cart <span id="cart-count" class="cart-badge">0</span>
+      </button>
+    </nav>
+  </header>
+
   <main id="shop">
-    <h1>Spin Sushi</h1>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-speedlines" aria-hidden="true"></div>
+      <div class="hero-inner">
+        <p class="hero-kana">回転寿司</p>
+        <h1 class="hero-title">SPIN<br />SUSHI</h1>
+        <p class="hero-tag">Hand-pressed nigiri at terminal velocity.</p>
+        <a class="btn-primary" href="#menu">View the Menu</a>
+      </div>
+    </section>
+
+    <!-- MENU -->
+    <section id="menu" class="menu">
+      <h2 class="section-title">The Menu <span class="kana">献立</span></h2>
+      <div id="menu-grid" class="menu-grid"><!-- rendered by main.js --></div>
+    </section>
+
+    <!-- ABOUT / STORY -->
+    <section id="about" class="about">
+      <div class="about-panel">
+        <h2 class="section-title">Our Story <span class="kana">物語</span></h2>
+        <p>By day, Spin Sushi serves the sharpest nigiri in the city. The rice is
+          pressed in a single motion. The cuts are clean. Regulars say the counter
+          hums faintly, like something underneath is always spinning.</p>
+        <p>They're not wrong. Beneath the floor sleeps a regulation Beyblade X
+          stadium. The staff don't talk about the red button. <em>You shouldn't press it.</em></p>
+      </div>
+    </section>
   </main>
+
+  <!-- CART DRAWER -->
+  <aside id="cart-drawer" class="cart-drawer" aria-hidden="true">
+    <div class="cart-head">
+      <h2>Your Order</h2>
+      <button id="cart-close" class="cart-close" aria-label="Close cart">✕</button>
+    </div>
+    <ul id="cart-lines" class="cart-lines"><!-- rendered by main.js --></ul>
+    <div class="cart-foot">
+      <div class="cart-total">Total <span id="cart-total">$0</span></div>
+      <button id="checkout" class="btn-primary btn-block">Checkout</button>
+      <p id="cart-confirm" class="cart-confirm" hidden>Order in! Itadakimasu 🥢</p>
+    </div>
+  </aside>
+  <div id="cart-scrim" class="scrim" hidden></div>
+
+  <!-- ARENA OVERLAY (hidden until red button) -->
+  <div id="arena" class="arena" hidden>
+    <div class="arena-hud">
+      <div class="arena-title">BEYBLADE <span>ARENA</span></div>
+      <button id="arena-exit" class="arena-exit">Exit to Shop</button>
+    </div>
+    <canvas id="arena-canvas" class="arena-canvas" width="720" height="720"></canvas>
+    <div class="arena-controls">
+      <label class="ctrl">Angle
+        <input id="angle" type="range" min="0" max="360" value="45" />
+      </label>
+      <div class="power-wrap">
+        <div class="power-label">Power</div>
+        <div class="power-track"><div id="power-fill" class="power-fill"></div></div>
+      </div>
+      <button id="launch" class="btn-launch">HOLD&nbsp;TO&nbsp;CHARGE</button>
+      <button id="rematch" class="btn-primary" hidden>Rematch</button>
+    </div>
+    <div id="arena-banner" class="arena-banner" hidden></div>
+  </div>
+
   <script type="module" src="js/main.js"></script>
 </body>
 </html>
