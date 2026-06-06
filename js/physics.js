@@ -30,3 +30,50 @@ export function stepBey(bey, stadium, params) {
 
   return { ...bey, x, y, vx, vy, spin, alive };
 }
+
+export function resolveCollision(a, b, params) {
+  const { restitution, collisionSpinDrain } = params;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const dist = Math.hypot(dx, dy);
+  const minDist = a.radius + b.radius;
+  if (dist === 0 || dist >= minDist) return [a, b];
+
+  // unit normal from a to b
+  const nx = dx / dist;
+  const ny = dy / dist;
+
+  // relative velocity along the normal
+  const rvx = b.vx - a.vx;
+  const rvy = b.vy - a.vy;
+  const velAlongNormal = rvx * nx + rvy * ny;
+
+  let a2 = { ...a };
+  let b2 = { ...b };
+
+  // only resolve velocity if they are approaching
+  if (velAlongNormal < 0) {
+    const invMassA = 1 / a.mass;
+    const invMassB = 1 / b.mass;
+    const j = (-(1 + restitution) * velAlongNormal) / (invMassA + invMassB);
+    const ix = j * nx;
+    const iy = j * ny;
+    a2.vx = a.vx - ix * invMassA;
+    a2.vy = a.vy - iy * invMassA;
+    b2.vx = b.vx + ix * invMassB;
+    b2.vy = b.vy + iy * invMassB;
+  }
+
+  // positional correction: push apart so they no longer overlap
+  const overlap = minDist - dist;
+  a2.x = a.x - nx * (overlap / 2);
+  a2.y = a.y - ny * (overlap / 2);
+  b2.x = b.x + nx * (overlap / 2);
+  b2.y = b.y + ny * (overlap / 2);
+
+  // both lose spin on contact
+  a2.spin = Math.max(0, a.spin - collisionSpinDrain);
+  b2.spin = Math.max(0, b.spin - collisionSpinDrain);
+
+  return [a2, b2];
+}
