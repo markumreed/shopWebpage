@@ -26,3 +26,22 @@ export function cartCount(cart) {
 export function cartSubtotal(cart) {
   return cart.reduce((sum, line) => sum + line.price * line.qty, 0);
 }
+
+const STORAGE_KEY = "spin-sushi-cart";
+
+export function saveCart(cart) {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+}
+
+export function loadCart() {
+  if (typeof localStorage === "undefined") return [];
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}

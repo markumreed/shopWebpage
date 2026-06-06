@@ -48,3 +48,37 @@ test("cartSubtotal sums price * qty", () => {
   const cart = addItem(addItem(addItem([], tuna), tuna), tamago); // 6*2 + 4
   assert.equal(cartSubtotal(cart), 16);
 });
+
+import { saveCart, loadCart } from "../js/cart.js";
+
+function withFakeLocalStorage(run) {
+  const store = new Map();
+  globalThis.localStorage = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, String(v)),
+    removeItem: (k) => store.delete(k)
+  };
+  try {
+    run();
+  } finally {
+    delete globalThis.localStorage;
+  }
+}
+
+test("saveCart then loadCart round-trips the cart", () => {
+  withFakeLocalStorage(() => {
+    const cart = addItem([], tuna);
+    saveCart(cart);
+    assert.deepEqual(loadCart(), cart);
+  });
+});
+
+test("loadCart returns [] when nothing is stored", () => {
+  withFakeLocalStorage(() => {
+    assert.deepEqual(loadCart(), []);
+  });
+});
+
+test("loadCart returns [] when no localStorage exists", () => {
+  assert.deepEqual(loadCart(), []);
+});
