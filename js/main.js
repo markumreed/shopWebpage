@@ -3,6 +3,7 @@ import { MENU } from "./data.js";
 import {
   addItem, removeItem, setQty, cartCount, cartSubtotal, saveCart, loadCart
 } from "./cart.js";
+import { mountArena } from "./arena.js";
 
 let cart = loadCart();
 
@@ -102,10 +103,18 @@ function init() {
   $("#cart-scrim").addEventListener("click", closeCart);
   $("#checkout").addEventListener("click", checkout);
 
-  // Red button — arena wired in Task 12
-  $("#red-button").addEventListener("click", () => {
-    console.log("RED BUTTON (arena mounts in Task 12)");
+  const arena = mountArena({
+    overlayEl: $("#arena"),
+    canvasEl: $("#arena-canvas"),
+    angleEl: $("#angle"),
+    powerFillEl: $("#power-fill"),
+    launchEl: $("#launch"),
+    rematchEl: $("#rematch"),
+    bannerEl: $("#arena-banner"),
+    onExit: () => {}
   });
+  $("#red-button").addEventListener("click", arena.open);
+  $("#arena-exit").addEventListener("click", arena.close);
 }
 
 init();
