@@ -66,7 +66,7 @@ body.battling .topbar { filter: brightness(.25) saturate(.4); transition: filter
 .power-track { width: 160px; height: 14px; background: #15122b; border: 1px solid #2bf2ff; overflow: hidden; }
 .power-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #2bf2ff, #ff2bd6); }
 
-/* Pre-match segmented toggles (spin direction, X-Celerator gear) */
+/* Pre-match segmented toggle (spin direction) */
 .ctrl.seg { gap: 6px; }
 .seg-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
 .seg-btns { display: flex; border: 1px solid #2bf2ff; }
@@ -77,7 +77,7 @@ body.battling .topbar { filter: brightness(.25) saturate(.4); transition: filter
 .seg-btn.is-on { background: #2bf2ff; color: #07060f; }
 .seg-btn:disabled { cursor: default; opacity: .5; }
 
-/* Rival's rolled spin + gear for the round */
+/* Rival's rolled spin direction + parts for the round */
 .rival-setup { text-align: center; font-size: 12px; letter-spacing: 1px;
   text-transform: uppercase; color: #ff2bd6; margin: 0; min-height: 1em;
   text-shadow: 0 0 10px rgba(255,43,214,.5); }

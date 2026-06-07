@@ -97,7 +97,7 @@ export function mountArena(opts) {
     meterRivalEl.style.width = (100 * Math.max(0, opponent.spin) / opponent.spin0) + "%";
   }
 
-  // ---- pre-match setup controls (spin direction + gear) ----
+  // ---- pre-match setup controls (spin direction) ----
   function dirLabel(dir) { return dir === 1 ? "↻ RIGHT" : "↺ LEFT"; }
 
   function renderRivalSetup() {
@@ -420,7 +420,7 @@ export function mountArena(opts) {
   // spin -> faster rotation; as spin runs low the top wobbles like a real one.
   function spinVisuals(b) {
     if (!b.alive) return;
-    const frac = Math.max(0, b.spin) / START_SPIN;
+    const frac = Math.max(0, b.spin) / b.spin0;
     b.rot += (b.dir ?? 1) * (0.25 + frac * 0.9); // direction-aware angular speed
     b.wobble += 0.3;
   }
@@ -526,7 +526,7 @@ export function mountArena(opts) {
 
   function drawBey(b) {
     if (!b.alive) return;
-    const frac = Math.max(0, b.spin) / START_SPIN;
+    const frac = Math.max(0, b.spin) / b.spin0;
     const r = b.radius * (0.82 + 0.18 * frac);
     // wobble grows as the top loses spin (a dying top tips and circles)
     const wob = (1 - frac) * 4;
