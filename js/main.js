@@ -183,6 +183,7 @@ function init() {
     specialEl: $("#special"),
     nextRoundEl: $("#next-round"),
     calloutEl: $("#arena-callout"),
+    muteEl: $("#arena-mute"),
     onExit: () => {}
   });
   $("#red-button").addEventListener("click", arena.open);

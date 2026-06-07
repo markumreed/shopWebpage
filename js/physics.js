@@ -83,6 +83,44 @@ export function resolveCollision(a, b, params) {
   return [a2, b2];
 }
 
+// aiSteer — returns a per-frame steering acceleration {ax, ay} for the AI bey.
+// This is what makes the rival a real opponent instead of a single dumb launch:
+//   - SEEK: when it has a spin advantage it hunts the player to force clashes
+//     that drain spin (it's winning the attrition trade).
+//   - SURVIVE: when it's behind on spin it hugs the stadium center, where the
+//     bowl-centering force keeps it safe and it can outlast the player.
+//   - EDGE FEAR: an extra inward push near the rim so it doesn't ring itself out.
+// `aggression` (0..1) scales the whole thing so callers can tune difficulty.
+export function aiSteer(opponent, player, stadium, aggression = 1) {
+  if (!opponent.alive || !player.alive) return { ax: 0, ay: 0 };
+
+  const spinAdv = opponent.spin - player.spin; // >0 means AI is ahead
+  const seeking = spinAdv > -10;               // hunt unless clearly behind
+
+  // target: the player when seeking, the safe center otherwise
+  const tx = seeking ? player.x : stadium.cx;
+  const ty = seeking ? player.y : stadium.cy;
+  const dx = tx - opponent.x;
+  const dy = ty - opponent.y;
+  const d = Math.hypot(dx, dy) || 1;
+
+  const base = seeking ? 0.05 : 0.07; // chase gentler than self-preservation
+  let ax = (dx / d) * base * aggression;
+  let ay = (dy / d) * base * aggression;
+
+  // edge fear: ramp up an inward push in the outer 25% of the bowl
+  const cx = stadium.cx - opponent.x;
+  const cy = stadium.cy - opponent.y;
+  const distCenter = Math.hypot(cx, cy);
+  const edge = distCenter / stadium.r;
+  if (edge > 0.75) {
+    const k = (edge - 0.75) / 0.25; // 0..1 across the danger band
+    ax += (cx / (distCenter || 1)) * 0.12 * k;
+    ay += (cy / (distCenter || 1)) * 0.12 * k;
+  }
+  return { ax, ay };
+}
+
 export function decideOutcome(player, opponent) {
   if (player.alive && opponent.alive) return null;
   if (player.alive && !opponent.alive) return "player";

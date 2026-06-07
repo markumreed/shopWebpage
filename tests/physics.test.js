@@ -117,6 +117,44 @@ test("resolveCollision: both beys with special drain each other and both flags c
   assert.equal(b2.special, false);
 });
 
+import { aiSteer } from "../js/physics.js";
+
+test("aiSteer returns zero when either bey is dead", () => {
+  const ai = bey({ x: 50, y: 0 });
+  const p = bey({ x: -50, y: 0 });
+  assert.deepEqual(aiSteer(ai, { ...p, alive: false }, STADIUM), { ax: 0, ay: 0 });
+  assert.deepEqual(aiSteer({ ...ai, alive: false }, p, STADIUM), { ax: 0, ay: 0 });
+});
+
+test("aiSteer seeks the player when it holds a spin advantage", () => {
+  const ai = bey({ x: 50, y: 0, spin: 90 });
+  const p = bey({ x: -50, y: 0, spin: 50 });
+  const { ax } = aiSteer(ai, p, STADIUM, 1);
+  assert.ok(ax < 0, "AI should steer toward the player (negative x)");
+});
+
+test("aiSteer retreats toward center when far behind on spin", () => {
+  const ai = bey({ x: 60, y: 0, spin: 10 });
+  const p = bey({ x: -50, y: 0, spin: 90 });
+  const { ax } = aiSteer(ai, p, STADIUM, 1);
+  assert.ok(ax < 0, "AI should steer back toward center (negative x from +x)");
+});
+
+test("aiSteer pushes inward hard near the rim (edge fear)", () => {
+  const ai = bey({ x: 95, y: 0, spin: 100 });
+  const p = bey({ x: 96, y: 0, spin: 100 }); // player would lure AI out of the ring
+  const { ax } = aiSteer(ai, p, STADIUM, 1);
+  assert.ok(ax < 0, "AI near the +x rim should be pushed back toward center");
+});
+
+test("aiSteer scales with aggression", () => {
+  const ai = bey({ x: 50, y: 0, spin: 90 });
+  const p = bey({ x: -50, y: 0, spin: 50 });
+  const soft = aiSteer(ai, p, STADIUM, 0.5);
+  const hard = aiSteer(ai, p, STADIUM, 1);
+  assert.ok(Math.abs(hard.ax) > Math.abs(soft.ax), "higher aggression steers harder");
+});
+
 import { decideOutcome } from "../js/physics.js";
 
 test("decideOutcome returns null while both are alive", () => {

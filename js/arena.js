@@ -1,24 +1,32 @@
 // arena.js — canvas battle. Pure physics comes from physics.js; round/score
 // state comes from match.js. This file is all DOM/canvas wiring + game feel.
-import { stepBey, resolveCollision, decideOutcome, distance } from "./physics.js";
+import { stepBey, resolveCollision, decideOutcome, distance, aiSteer } from "./physics.js";
 import { newMatch, recordRound, WIN_TARGET } from "./match.js";
+import * as sfx from "./sound.js";
 
 const STADIUM_PARAMS = { dt: 1, friction: 0.012, spinDecay: 0.08, centering: 0.0016 };
 const COLLISION = { restitution: 1.05, collisionSpinDrain: 1.5, superDrain: 25 };
 const START_SPIN = 100;
-const BURST_GAIN = 22;        // burst-meter % gained per clash
+const BURST_GAIN = 20;        // player burst-meter % gained per clash
+const AI_BURST_GAIN = 26;     // rival charges its special faster (difficulty)
+const AI_SPIN_BONUS = 1.12;   // rival launches with a spin-stamina advantage
 const SPECIAL_DASH = 8;       // velocity impulse added on special activation
 const STREAK_KEY = "arena.streak";
 
 function makeBey(name, x, y, color) {
-  return { name, x, y, vx: 0, vy: 0, spin: START_SPIN, radius: 22, mass: 1, alive: true, color, special: false };
+  return {
+    name, x, y, vx: 0, vy: 0, spin: START_SPIN, radius: 22, mass: 1,
+    alive: true, color, special: false,
+    rot: 0,        // accumulated visual rotation (radians)
+    wobble: 0,     // wobble phase for the low-spin death wobble
+  };
 }
 
 export function mountArena(opts) {
   const {
     overlayEl, canvasEl, angleEl, powerFillEl, launchEl, rematchEl, bannerEl, onExit,
     meterYouEl, meterRivalEl, scoreYouEl, scoreRivalEl, streakEl,
-    burstFillEl, specialEl, nextRoundEl, calloutEl,
+    burstFillEl, specialEl, nextRoundEl, calloutEl, muteEl,
   } = opts;
   const ctx = canvasEl.getContext("2d");
   const W = canvasEl.width, H = canvasEl.height;
@@ -26,7 +34,7 @@ export function mountArena(opts) {
 
   let player, opponent, phase, raf, charging, power, wasColliding, bursts;
   let bannerTimer, calloutTimer, shakeTimer;
-  let match, burstMeter, specialReady;
+  let match, burstMeter, specialReady, aiBurstMeter;
 
   // ---- streak persistence (tolerates unavailable/corrupt storage) ----
   function loadStreak() {
@@ -72,6 +80,7 @@ export function mountArena(opts) {
     wasColliding = false;
     bursts = [];
     burstMeter = 0;
+    aiBurstMeter = 0;
     specialReady = false;
     clearTimeout(bannerTimer);
     clearTimeout(calloutTimer);
@@ -108,6 +117,7 @@ export function mountArena(opts) {
   // ---- charge-launch input ----
   function startCharge() {
     if (phase !== "ready") return;
+    sfx.unlockAudio(); // first user gesture: allow audio to play
     charging = true;
     chargeTick();
   }
@@ -136,16 +146,21 @@ export function mountArena(opts) {
     player.vx = Math.cos(angle) * speed;
     player.vy = Math.sin(angle) * speed;
     player.spin = START_SPIN * (0.6 + 0.4 * (power / 100));
+    sfx.launch(power / 100);
 
-    // AI launches with randomized angle/power, aimed roughly at player
-    const aiAngle = Math.atan2(player.y - opponent.y, player.x - opponent.x) + (Math.random() - 0.5);
-    const aiSpeed = 5 + Math.random() * 5;
+    // AI launches a hard, accurate strike: it leads the player's position and
+    // commits a strong, near-on-target shot (only a small spread), and starts
+    // with a spin-stamina advantage. It then keeps steering during the round.
+    const aiAngle = Math.atan2(player.y - opponent.y, player.x - opponent.x) + (Math.random() - 0.5) * 0.3;
+    const aiSpeed = 8 + Math.random() * 3;
     opponent.vx = Math.cos(aiAngle) * aiSpeed;
     opponent.vy = Math.sin(aiAngle) * aiSpeed;
+    opponent.spin = START_SPIN * AI_SPIN_BONUS;
 
     phase = "spinning";
     launchEl.disabled = true;
     bannerEl.hidden = true;
+    sfx.startSpinHum();
     loop();
   }
 
@@ -172,13 +187,34 @@ export function mountArena(opts) {
     burstFillEl.style.width = "0%";
     specialEl.disabled = true;
     specialEl.classList.remove("ready");
+    sfx.special();
     showCallout("SPECIAL!");
+  }
+
+  // AI special: charges its own meter on every clash and unleashes a dash the
+  // moment it's full. This is a big part of the added difficulty.
+  function fillAiBurst(amount) {
+    if (opponent.special) return;
+    aiBurstMeter = Math.min(100, aiBurstMeter + amount);
+    if (aiBurstMeter >= 100 && phase === "spinning") activateAiSpecial();
+  }
+  function activateAiSpecial() {
+    opponent.special = true; // consumed on next collision in resolveCollision
+    const ang = Math.atan2(player.y - opponent.y, player.x - opponent.x);
+    opponent.vx += Math.cos(ang) * SPECIAL_DASH;
+    opponent.vy += Math.sin(ang) * SPECIAL_DASH;
+    opponent.spin = Math.min(START_SPIN * AI_SPIN_BONUS, opponent.spin + 10);
+    aiBurstMeter = 0;
+    sfx.special();
+    showCallout("RIVAL SPECIAL!");
   }
 
   // ---- impact reaction (callout + shake + burst gain) ----
   function onImpact(impact, x, y) {
     spawnBurst(x, y, "#ffffff");
     fillBurst(BURST_GAIN);
+    fillAiBurst(AI_BURST_GAIN);
+    sfx.clash(Math.min(1, impact / 18));
     let tier, text;
     if (impact >= 16) { tier = "lg"; text = "MEGA HIT!"; }
     else if (impact >= 9) { tier = "md"; text = "SMASH!"; }
@@ -190,8 +226,21 @@ export function mountArena(opts) {
   // ---- main loop ----
   function loop() {
     const pPrev = player.alive, oPrev = opponent.alive;
+
+    // AI agency: steer the rival each frame (seek when ahead, survive when behind)
+    const steer = aiSteer(opponent, player, stadium, 1);
+    opponent.vx += steer.ax;
+    opponent.vy += steer.ay;
+
     player = stepBey(player, stadium, STADIUM_PARAMS);
     opponent = stepBey(opponent, stadium, STADIUM_PARAMS);
+
+    // advance visual rotation + low-spin wobble from current spin speed
+    spinVisuals(player);
+    spinVisuals(opponent);
+
+    // spin hum tracks combined remaining spin energy
+    sfx.updateSpinHum((player.spin + opponent.spin) / (2 * START_SPIN));
 
     // impact burst on the frame the beys first make contact
     const touching = distance(player.x, player.y, opponent.x, opponent.y) <= player.radius + opponent.radius;
@@ -221,6 +270,10 @@ export function mountArena(opts) {
   function finishRound(outcome, reason) {
     phase = "done";
     cancelAnimationFrame(raf);
+    sfx.stopSpinHum();
+    if (outcome !== "draw") {
+      if (reason === "ringout") sfx.ringOut(); else sfx.spinOut();
+    }
     launchEl.disabled = true;
     specialEl.disabled = true;
     specialEl.classList.remove("ready");
@@ -249,6 +302,7 @@ export function mountArena(opts) {
         const won = match.matchWinner === "player";
         persistStreak(match.streak);
         renderScore();
+        if (won) sfx.win(); else sfx.lose();
         showBanner(won ? "MATCH WON!" : "MATCH LOST");
         rematchEl.textContent = "New Match";
         rematchEl.hidden = false;
@@ -258,6 +312,15 @@ export function mountArena(opts) {
         nextRoundEl.hidden = false;
       }
     }, 800);
+  }
+
+  // Advance a bey's spin angle and wobble based on its remaining spin. Faster
+  // spin -> faster rotation; as spin runs low the top wobbles like a real one.
+  function spinVisuals(b) {
+    if (!b.alive) return;
+    const frac = Math.max(0, b.spin) / START_SPIN;
+    b.rot += 0.25 + frac * 0.9;          // angular speed scales with spin
+    b.wobble += 0.3;
   }
 
   // ---- impact bursts (transient expanding rings) ----
@@ -273,12 +336,37 @@ export function mountArena(opts) {
   function draw() {
     updateMeters();
     ctx.clearRect(0, 0, W, H);
-    // stadium ring
+
+    // stadium bowl: dark dished floor with concentric guide rings
+    const floor = ctx.createRadialGradient(
+      stadium.cx, stadium.cy, stadium.r * 0.1,
+      stadium.cx, stadium.cy, stadium.r
+    );
+    floor.addColorStop(0, "rgba(20,28,40,.9)");
+    floor.addColorStop(0.7, "rgba(12,18,28,.85)");
+    floor.addColorStop(1, "rgba(5,8,14,.95)");
+    ctx.fillStyle = floor;
+    ctx.beginPath();
+    ctx.arc(stadium.cx, stadium.cy, stadium.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(43,242,255,.12)";
+    ctx.lineWidth = 1.5;
+    for (let i = 1; i <= 3; i++) {
+      ctx.beginPath();
+      ctx.arc(stadium.cx, stadium.cy, stadium.r * (i / 4), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // stadium rim
     ctx.strokeStyle = "rgba(43,242,255,.5)";
     ctx.lineWidth = 4;
+    ctx.shadowColor = "rgba(43,242,255,.6)";
+    ctx.shadowBlur = 18;
     ctx.beginPath();
     ctx.arc(stadium.cx, stadium.cy, stadium.r, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.shadowBlur = 0;
     drawBey(player);
     drawBey(opponent);
     drawBursts();
@@ -299,24 +387,110 @@ export function mountArena(opts) {
     });
   }
 
+  // Draw a hex blade ring (the metal attack ring of a beyblade).
+  function bladeRing(r, blades, color, alpha) {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    for (let i = 0; i < blades; i++) {
+      const a = (i / blades) * Math.PI * 2;
+      const a2 = a + (Math.PI * 2) / blades;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * r * 0.62, Math.sin(a) * r * 0.62);
+      ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      // swept trailing edge gives each blade a curved, aggressive look
+      ctx.lineTo(Math.cos(a2 - 0.18) * r, Math.sin(a2 - 0.18) * r);
+      ctx.lineTo(Math.cos(a2 - 0.18) * r * 0.62, Math.sin(a2 - 0.18) * r * 0.62);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
   function drawBey(b) {
     if (!b.alive) return;
+    const frac = Math.max(0, b.spin) / START_SPIN;
+    const r = b.radius * (0.82 + 0.18 * frac);
+    // wobble grows as the top loses spin (a dying top tips and circles)
+    const wob = (1 - frac) * 4;
+    const wx = Math.cos(b.wobble) * wob;
+    const wy = Math.sin(b.wobble * 1.3) * wob * 0.6;
+
     ctx.save();
-    ctx.translate(b.x, b.y);
-    ctx.shadowColor = b.color;
-    ctx.shadowBlur = 18;
-    ctx.fillStyle = b.color;
+
+    // contact shadow on the stadium floor for depth
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = "#000";
     ctx.beginPath();
-    ctx.arc(0, 0, b.radius * (0.5 + 0.5 * (b.spin / START_SPIN)), 0, Math.PI * 2);
+    ctx.ellipse(b.x + 4, b.y + 8, r * 1.05, r * 0.55, 0, 0, Math.PI * 2);
     ctx.fill();
-    // spin tick
-    ctx.strokeStyle = "#fff";
+    ctx.restore();
+
+    ctx.translate(b.x + wx, b.y + wy);
+
+    // motion-blur energy ring: brighter/larger the faster it spins
+    ctx.save();
+    ctx.shadowColor = b.color;
+    ctx.shadowBlur = 22;
+    ctx.strokeStyle = b.color;
+    ctx.globalAlpha = 0.18 + 0.32 * frac;
     ctx.lineWidth = 3;
-    const a = (b.x + b.y) * 0.2;
+    for (let i = 0; i < 3; i++) {
+      const sweep = 0.7 + frac * 1.4;
+      const off = b.rot * 0.5 + (i * Math.PI * 2) / 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 1.22, off, off + sweep);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // spinning metal attack ring — ghosted copies simulate motion blur
+    ctx.save();
+    ctx.rotate(b.rot);
+    bladeRing(r, 6, b.color, 1);
+    ctx.rotate(-0.18);
+    bladeRing(r, 6, b.color, 0.35 * frac);
+    ctx.rotate(-0.18);
+    bladeRing(r, 6, b.color, 0.18 * frac);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+
+    // metallic disc body (radial gradient = brushed-metal sheen)
+    const g = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r * 0.78);
+    g.addColorStop(0, "#f4f7fa");
+    g.addColorStop(0.45, "#aeb7c2");
+    g.addColorStop(0.8, "#5b636e");
+    g.addColorStop(1, "#2c3138");
+    ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(Math.cos(a) * b.radius, Math.sin(a) * b.radius);
+    ctx.arc(0, 0, r * 0.72, 0, Math.PI * 2);
+    ctx.fill();
+
+    // colored hub ring
+    ctx.strokeStyle = b.color;
+    ctx.lineWidth = r * 0.12;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.5, 0, Math.PI * 2);
     ctx.stroke();
+
+    // center bolt with screw cross and specular highlight
+    const bg = ctx.createRadialGradient(-r * 0.12, -r * 0.12, 1, 0, 0, r * 0.32);
+    bg.addColorStop(0, "#ffffff");
+    bg.addColorStop(0.6, "#c9d2dc");
+    bg.addColorStop(1, "#6b7480");
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(40,46,54,.8)";
+    ctx.lineWidth = 2;
+    ctx.save();
+    ctx.rotate(b.rot * 0.4);
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.2, 0); ctx.lineTo(r * 0.2, 0);
+    ctx.moveTo(0, -r * 0.2); ctx.lineTo(0, r * 0.2);
+    ctx.stroke();
+    ctx.restore();
+
     ctx.restore();
   }
 
@@ -341,6 +515,7 @@ export function mountArena(opts) {
   }
   function close() {
     cancelAnimationFrame(raf);
+    sfx.stopSpinHum();
     clearTimeout(bannerTimer);
     clearTimeout(calloutTimer);
     clearTimeout(shakeTimer);
@@ -357,6 +532,16 @@ export function mountArena(opts) {
   launchEl.addEventListener("touchend", (e) => { e.preventDefault(); release(); }, { passive: false });
   launchEl.addEventListener("touchcancel", cancelCharge, { passive: true });
   specialEl.addEventListener("click", activateSpecial);
+  if (muteEl) {
+    muteEl.addEventListener("click", () => {
+      sfx.unlockAudio();
+      const muted = !sfx.isMuted();
+      sfx.setMuted(muted);
+      muteEl.textContent = muted ? "🔇" : "🔊";
+      muteEl.setAttribute("aria-pressed", String(muted));
+      muteEl.title = muted ? "Unmute sound" : "Mute sound";
+    });
+  }
   nextRoundEl.addEventListener("click", startRound);
   rematchEl.addEventListener("click", startMatch);
 

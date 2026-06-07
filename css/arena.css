@@ -47,6 +47,11 @@ body.battling .topbar { filter: brightness(.25) saturate(.4); transition: filter
 .arena-exit { background: transparent; border: 1.5px solid #2bf2ff; color: #2bf2ff; padding: 8px 14px;
   font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 0 0 14px rgba(43,242,255,.5); }
 .arena-exit:hover { background: #2bf2ff; color: #07060f; }
+.arena-hud-right { display: flex; align-items: center; gap: 10px; }
+.arena-mute { background: transparent; border: 1.5px solid #2bf2ff; color: #2bf2ff;
+  width: 38px; height: 38px; font-size: 18px; line-height: 1; cursor: pointer; border-radius: 6px;
+  box-shadow: 0 0 14px rgba(43,242,255,.5); }
+.arena-mute:hover { background: #2bf2ff; }
 
 .arena-canvas { width: min(72vmin, 720px); height: min(72vmin, 720px);
   border-radius: 50%; box-shadow: 0 0 60px rgba(43,242,255,.35), inset 0 0 80px rgba(255,43,214,.25);
