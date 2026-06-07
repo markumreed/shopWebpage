@@ -37,6 +37,14 @@ test("statsToPhysics clamps to the stated bounds at the extremes", () => {
   assert.ok(Math.abs(hi.mass - 1.5) < 1e-9);
   assert.ok(Math.abs(lo.centeringMult - 1) < 1e-9);
   assert.ok(Math.abs(hi.centeringMult - 1.8) < 1e-9);
+  assert.ok(Math.abs(lo.spinDecayMult - 1.2) < 1e-9);
+  assert.ok(Math.abs(lo.defMult - 0.7) < 1e-9);
+  assert.ok(Math.abs(lo.atkMult - 0.7) < 1e-9);
+  assert.ok(Math.abs(lo.launchMult - 0.85) < 1e-9);
+  assert.ok(Math.abs(hi.spinDecayMult - 0.8) < 1e-9);
+  assert.ok(Math.abs(hi.defMult - 1.3) < 1e-9);
+  assert.ok(Math.abs(hi.atkMult - 1.3) < 1e-9);
+  assert.ok(Math.abs(hi.launchMult - 1.15) < 1e-9);
 });
 
 test("statsToPhysics attaches a gear derived from xDash", () => {
@@ -53,4 +61,7 @@ test("xDashToGear is monotonic and bounded", () => {
   assert.equal(hi.engageSpeed, 3.0);
   assert.equal(lo.rideCap, 10);
   assert.equal(hi.rideCap, 14);
+  assert.ok(hi.spinCost > lo.spinCost);           // higher xDash = more spin cost on release
+  assert.ok(hi.rideSpinDrain > lo.rideSpinDrain);  // higher xDash = more drain while riding
+  assert.ok(hi.minRideSpeed > lo.minRideSpeed);    // higher xDash = faster minimum ride speed
 });

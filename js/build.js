@@ -4,7 +4,7 @@
 //   bit:           { attack, defense, stamina, xDash, burstResistance }
 
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
-const norm = (x, lo, hi) => clamp01((x - lo) / (hi - lo));
+const norm = (x, lo, hi) => (lo === hi ? 0 : clamp01((x - lo) / (hi - lo)));
 
 // reference ranges (first-pass, tunable): summed atk/def/sta, then bit-only stats
 const SUM_LO = 30, SUM_HI = 150;
@@ -44,7 +44,7 @@ export function statsToPhysics(stats) {
   const bN = norm(stats.burstResistance, BURST_LO, BURST_HI);
   return {
     spin0:         80 + 40 * sN,    // starting spin (80..120; ~100 mid)
-    spinDecayMult: 1.2 - 0.4 * sN,  // scales global spin decay (1.2..0.8)
+    spinDecayMult: 1.2 - 0.4 * sN,  // scales spin decay (1.2 at lo stamina, 0.8 at hi)
     mass:          0.7 + 0.8 * dN,  // knockback resistance (0.7..1.5)
     defMult:       0.7 + 0.6 * dN,  // divides spin lost when struck (0.7..1.3)
     atkMult:       0.7 + 0.6 * aN,  // scales spin drained from the foe (0.7..1.3)
