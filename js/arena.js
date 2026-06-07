@@ -11,7 +11,6 @@ const COLLISION = { restitution: 1.05, collisionSpinDrain: 1.5, superDrain: 25, 
 const START_SPIN = 100;
 const BURST_GAIN = 20;        // player burst-meter % gained per clash
 const AI_BURST_GAIN = 17;     // rival charges its special a touch slower than you
-const AI_SPIN_BONUS = 1.0;    // rival no longer launches with a stamina advantage
 const AI_AGGRESSION = 0.7;    // rival steers less relentlessly (difficulty)
 const SPECIAL_DASH = 8;       // velocity impulse added on special activation
 const STREAK_KEY = "arena.streak";
