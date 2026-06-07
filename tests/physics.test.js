@@ -89,6 +89,7 @@ test("resolveCollision: a bey with special drains extra spin from the other", ()
   assert.equal(a2.spin, 45);        // attacker loses only the normal drain
   assert.equal(b2.spin, 25);        // defender loses normal drain + superDrain
   assert.equal(a2.special, false);  // special is one-shot: flag is consumed
+  assert.ok(!b2.special, "defender should not gain special flag");
 });
 
 test("resolveCollision: superDrain is ignored when no bey has special", () => {
@@ -104,6 +105,16 @@ test("resolveCollision: superDrain cannot push spin below 0", () => {
   const b = bey({ x: 5, y: 0, spin: 3 });
   const [, b2] = resolveCollision(a, b, { restitution: 1, collisionSpinDrain: 5, superDrain: 20 });
   assert.equal(b2.spin, 0);
+});
+
+test("resolveCollision: both beys with special drain each other and both flags clear", () => {
+  const a = bey({ x: -5, y: 0, spin: 50, special: true });
+  const b = bey({ x: 5, y: 0, spin: 50, special: true });
+  const [a2, b2] = resolveCollision(a, b, { restitution: 1, collisionSpinDrain: 5, superDrain: 20 });
+  assert.equal(a2.spin, 25);        // normal drain + superDrain from b's special
+  assert.equal(b2.spin, 25);        // normal drain + superDrain from a's special
+  assert.equal(a2.special, false);
+  assert.equal(b2.special, false);
 });
 
 import { decideOutcome } from "../js/physics.js";
