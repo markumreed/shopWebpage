@@ -186,6 +186,12 @@ function init() {
     muteEl: $("#arena-mute"),
     spinDirEl: $("#spin-dir"),
     rivalSetupEl: $("#rival-setup"),
+    bladeSelEl: $("#sel-blade"),
+    ratchetSelEl: $("#sel-ratchet"),
+    bitSelEl: $("#sel-bit"),
+    buildStatsEl: $("#build-stats"),
+    buildYouEl: $("#build-you"),
+    buildRivalEl: $("#build-rival"),
     onExit: () => {}
   });
   $("#red-button").addEventListener("click", arena.open);

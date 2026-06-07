@@ -46,6 +46,7 @@ export function mountArena(opts) {
     meterYouEl, meterRivalEl, scoreYouEl, scoreRivalEl, streakEl,
     burstFillEl, specialEl, nextRoundEl, calloutEl, muteEl,
     spinDirEl, rivalSetupEl,
+    bladeSelEl, ratchetSelEl, bitSelEl, buildStatsEl, buildYouEl, buildRivalEl,
   } = opts;
   const ctx = canvasEl.getContext("2d");
   const W = canvasEl.width, H = canvasEl.height;
@@ -116,6 +117,46 @@ export function mountArena(opts) {
 
   function setSetupEnabled(on) {
     spinDirEl.querySelectorAll(".seg-btn").forEach((b) => { b.disabled = !on; });
+    [bladeSelEl, ratchetSelEl, bitSelEl].forEach((s) => { s.disabled = !on; });
+  }
+
+  // ---- build picker + HUD part images ----
+  function fillSelect(sel, arr) {
+    sel.innerHTML = "";
+    arr.forEach((p, i) => {
+      const o = document.createElement("option");
+      o.value = String(i);
+      o.textContent = p.name;
+      sel.appendChild(o);
+    });
+  }
+
+  function renderBuildImages(container, build) {
+    container.innerHTML = "";
+    [build.blade, build.ratchet, build.bit].forEach((p) => {
+      const img = document.createElement("img");
+      img.className = "build-img";
+      img.src = p.image;
+      img.alt = p.name;
+      img.title = p.name;
+      img.onerror = () => { img.style.visibility = "hidden"; }; // tolerate missing assets
+      container.appendChild(img);
+    });
+  }
+
+  function renderPlayerBuild() {
+    const s = combineStats(playerBuild.blade, playerBuild.ratchet, playerBuild.bit);
+    buildStatsEl.textContent =
+      `ATK ${s.attack} · DEF ${s.defense} · STA ${s.stamina} · X ${s.xDash} · BR ${s.burstResistance}`;
+    renderBuildImages(buildYouEl, playerBuild);
+  }
+
+  // Rebuild the idle player bey so a part change takes effect before launch.
+  function applyPlayerBuild() {
+    if (phase !== "ready") return;
+    player = makeBey("You", stadium.cx - 120, stadium.cy, "#2bf2ff", playerDir, buildProfile(playerBuild));
+    renderPlayerBuild();
+    draw();
   }
 
   // ---- match / round lifecycle ----
@@ -154,6 +195,8 @@ export function mountArena(opts) {
     setSetupEnabled(true);
     syncSetupControls();
     renderRivalSetup();
+    renderPlayerBuild();
+    renderBuildImages(buildRivalEl, rivalBuild);
     draw();
   }
 
@@ -672,6 +715,25 @@ export function mountArena(opts) {
     if (player) player.dir = playerDir; // reflect on the idle pre-launch bey
     syncSetupControls();
     draw();
+  });
+  // populate the part dropdowns once and wire change handlers
+  fillSelect(bladeSelEl, BLADES);
+  fillSelect(ratchetSelEl, RATCHETS);
+  fillSelect(bitSelEl, BITS);
+  bladeSelEl.addEventListener("change", () => {
+    if (phase !== "ready") return;
+    playerBuild = { ...playerBuild, blade: BLADES[Number(bladeSelEl.value)] };
+    applyPlayerBuild();
+  });
+  ratchetSelEl.addEventListener("change", () => {
+    if (phase !== "ready") return;
+    playerBuild = { ...playerBuild, ratchet: RATCHETS[Number(ratchetSelEl.value)] };
+    applyPlayerBuild();
+  });
+  bitSelEl.addEventListener("change", () => {
+    if (phase !== "ready") return;
+    playerBuild = { ...playerBuild, bit: BITS[Number(bitSelEl.value)] };
+    applyPlayerBuild();
   });
   syncSetupControls();
 

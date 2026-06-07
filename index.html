@@ -162,10 +162,12 @@
       <div class="meter you">
         <span class="meter-label">YOU</span>
         <div class="meter-track"><div id="meter-you" class="meter-fill"></div></div>
+        <div id="build-you" class="build-imgs" aria-hidden="true"></div>
       </div>
       <div class="meter rival">
         <span class="meter-label">RIVAL</span>
         <div class="meter-track"><div id="meter-rival" class="meter-fill"></div></div>
+        <div id="build-rival" class="build-imgs" aria-hidden="true"></div>
       </div>
     </div>
 
@@ -178,6 +180,15 @@
           <button type="button" class="seg-btn is-on" data-dir="1" aria-pressed="true">↻&nbsp;Right</button>
           <button type="button" class="seg-btn" data-dir="-1" aria-pressed="false">↺&nbsp;Left</button>
         </div>
+      </div>
+      <div class="ctrl build-picker">
+        <span class="seg-label">Build</span>
+        <div class="build-selects">
+          <select id="sel-blade" class="part-select" aria-label="Blade"></select>
+          <select id="sel-ratchet" class="part-select" aria-label="Ratchet"></select>
+          <select id="sel-bit" class="part-select" aria-label="Bit"></select>
+        </div>
+        <p id="build-stats" class="build-stats"></p>
       </div>
       <label class="ctrl">Angle
         <input id="angle" type="range" min="0" max="360" value="45" />
