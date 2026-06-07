@@ -172,6 +172,20 @@
     <canvas id="arena-canvas" class="arena-canvas" width="720" height="720"></canvas>
 
     <div class="arena-controls">
+      <div class="ctrl seg">
+        <span class="seg-label">Spin</span>
+        <div class="seg-btns" id="spin-dir" role="group" aria-label="Spin direction">
+          <button type="button" class="seg-btn is-on" data-dir="1" aria-pressed="true">↻&nbsp;Right</button>
+          <button type="button" class="seg-btn" data-dir="-1" aria-pressed="false">↺&nbsp;Left</button>
+        </div>
+      </div>
+      <div class="ctrl seg">
+        <span class="seg-label">Gear</span>
+        <div class="seg-btns" id="gear" role="group" aria-label="X-Celerator gear">
+          <button type="button" class="seg-btn" data-gear="high" aria-pressed="false">High</button>
+          <button type="button" class="seg-btn is-on" data-gear="standard" aria-pressed="true">Standard</button>
+        </div>
+      </div>
       <label class="ctrl">Angle
         <input id="angle" type="range" min="0" max="360" value="45" />
       </label>
@@ -188,6 +202,7 @@
       <button id="next-round" class="btn-primary" hidden>Next Round</button>
       <button id="rematch" class="btn-primary" hidden>Rematch</button>
     </div>
+    <p id="rival-setup" class="rival-setup"></p>
 
     <p id="arena-rules" class="arena-rules">
       Knock the rival out of the ring (<b>RING&nbsp;OUT</b>) or outspin them
