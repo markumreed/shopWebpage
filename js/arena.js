@@ -207,10 +207,12 @@ export function mountArena(opts) {
 
     const outcome = decideOutcome(player, opponent);
     if (outcome) {
-      // a bey that just died while still spinning was knocked out (ring-out)
+      // ring-out vs spin-out is decided by where the bey ended up: a bey that
+      // died outside the stadium radius was knocked out (ring-out); otherwise
+      // its spin ran down (spin-out).
       const ringout =
-        (pPrev && !player.alive && player.spin > 0) ||
-        (oPrev && !opponent.alive && opponent.spin > 0);
+        (pPrev && !player.alive && distance(player.x, player.y, stadium.cx, stadium.cy) > stadium.r) ||
+        (oPrev && !opponent.alive && distance(opponent.x, opponent.y, stadium.cx, stadium.cy) > stadium.r);
       return finishRound(outcome, ringout ? "ringout" : "spinout");
     }
     raf = requestAnimationFrame(loop);
