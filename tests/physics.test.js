@@ -199,57 +199,181 @@ test("decideOutcome returns 'draw' when both are dead", () => {
   assert.equal(decideOutcome(bey({ alive: false }), bey({ alive: false })), "draw");
 });
 
-import { tryXtremeDash } from "../js/physics.js";
+import { cardioidPoint, cardioidTangent, nearestCardioidParam, CARDIOID_MAX_R } from "../js/physics.js";
 
-const RAIL_T = { inner: 60, outer: 70, cooldown: 40 };
-const GEAR_T = { dashImpulse: 8, engageSpeed: 3, spinCost: 4 };
+// shared float comparison for the geometry tests
+function approx(actual, expected, eps = 1e-9) {
+  assert.ok(Math.abs(actual - expected) <= eps, `got ${actual}, expected ≈ ${expected}`);
+}
 
-test("tryXtremeDash fires inside the rail band when fast enough", () => {
-  // on the band (dist 65 from center 0,0), moving +x at speed 5 >= 3
-  const b = bey({ x: 65, y: 0, vx: 5, vy: 0, spin: 100, dashCd: 0 });
-  const { bey: next, fired } = tryXtremeDash(b, STADIUM, RAIL_T, GEAR_T);
-  assert.equal(fired, true);
-  assert.equal(next.vx, 13);             // 5 + unit(1)*8
-  assert.equal(next.spin, 96);           // 100 - spinCost 4
-  assert.equal(next.dashCd, 40);         // cooldown set from rail
+const GEOM_UNIT = { cx: 0, cy: 0, scale: 1, rot: 0 };
+
+test("cardioidPoint puts the cusp (theta=0) at +0.875*scale from center (rot=0)", () => {
+  const p = cardioidPoint(0, GEOM_UNIT);
+  approx(p.x, 0.875);
+  approx(p.y, 0);
 });
 
-test("tryXtremeDash impulse follows a diagonal heading on both axes", () => {
-  // moving at 4,3 => speed 5 >= engage 3; impulse 8 split along the unit heading
-  const b = bey({ x: 65, y: 0, vx: 4, vy: 3, spin: 100, dashCd: 0 });
-  const { bey: next, fired } = tryXtremeDash(b, STADIUM, RAIL_T, GEAR_T);
-  assert.equal(fired, true);
-  assert.equal(next.vx, 4 + (4 / 5) * 8); // 10.4
-  assert.equal(next.vy, 3 + (3 / 5) * 8); // 7.8
+test("cardioidPoint puts the far rounded end (theta=PI) opposite the cusp", () => {
+  const p = cardioidPoint(Math.PI, GEOM_UNIT);
+  approx(p.x, -1.125);
+  approx(p.y, 0);
 });
 
-test("tryXtremeDash does not fire below the engage speed", () => {
-  const b = bey({ x: 65, y: 0, vx: 1, vy: 0, dashCd: 0 });
-  const { fired } = tryXtremeDash(b, STADIUM, RAIL_T, GEAR_T);
-  assert.equal(fired, false);
+test("cardioidPoint stays within CARDIOID_MAX_R of center", () => {
+  for (let i = 0; i < 360; i++) {
+    const p = cardioidPoint((i / 360) * Math.PI * 2, GEOM_UNIT);
+    assert.ok(Math.hypot(p.x, p.y) <= CARDIOID_MAX_R + 1e-6, `point at i=${i} escaped`);
+  }
 });
 
-test("tryXtremeDash does not fire outside the rail band", () => {
-  const inside = bey({ x: 10, y: 0, vx: 5, vy: 0, dashCd: 0 }); // dist 10 < inner 60
-  const outside = bey({ x: 90, y: 0, vx: 5, vy: 0, dashCd: 0 }); // dist 90 > outer 70
-  assert.equal(tryXtremeDash(inside, STADIUM, RAIL_T, GEAR_T).fired, false);
-  assert.equal(tryXtremeDash(outside, STADIUM, RAIL_T, GEAR_T).fired, false);
+test("cardioidTangent returns a unit vector with the expected direction at PI/2", () => {
+  const t = cardioidTangent(Math.PI / 2, GEOM_UNIT);
+  approx(Math.hypot(t.x, t.y), 1, 1e-9);
+  approx(t.x, -Math.SQRT1_2, 1e-9);
+  approx(t.y, Math.SQRT1_2, 1e-9);
 });
 
-test("tryXtremeDash does not fire while on cooldown", () => {
-  const b = bey({ x: 65, y: 0, vx: 5, vy: 0, dashCd: 12 });
-  assert.equal(tryXtremeDash(b, STADIUM, RAIL_T, GEAR_T).fired, false);
+test("cardioidTangent returns a zero vector at the degenerate cusp (theta=0)", () => {
+  const t = cardioidTangent(0, GEOM_UNIT);
+  assert.equal(t.x, 0);
+  assert.equal(t.y, 0);
 });
 
-test("tryXtremeDash does not fire for a dead bey", () => {
-  const b = bey({ x: 65, y: 0, vx: 5, vy: 0, alive: false, dashCd: 0 });
-  assert.equal(tryXtremeDash(b, STADIUM, RAIL_T, GEAR_T).fired, false);
+test("cardioidPoint applies scale", () => {
+  const p = cardioidPoint(0, { cx: 0, cy: 0, scale: 2, rot: 0 });
+  approx(p.x, 0.875 * 2);
+  approx(p.y, 0);
 });
 
-test("tryXtremeDash does not mutate the input bey", () => {
-  const b = bey({ x: 65, y: 0, vx: 5, vy: 0, spin: 100, dashCd: 0 });
-  tryXtremeDash(b, STADIUM, RAIL_T, GEAR_T);
-  assert.equal(b.vx, 5);
-  assert.equal(b.spin, 100);
-  assert.equal(b.dashCd, 0);
+test("cardioidPoint applies rotation: cusp rotates 90 degrees onto the +y axis", () => {
+  const p = cardioidPoint(0, { cx: 0, cy: 0, scale: 1, rot: Math.PI / 2 });
+  approx(p.x, 0, 1e-9);
+  approx(p.y, 0.875, 1e-9);
+});
+
+test("cardioidPoint applies translation", () => {
+  const p = cardioidPoint(0, { cx: 10, cy: 20, scale: 1, rot: 0 });
+  approx(p.x, 10.875);
+  approx(p.y, 20);
+});
+
+test("nearestCardioidParam finds ~0 distance for a point on the curve", () => {
+  const onCurve = cardioidPoint(1.0, GEOM_UNIT);
+  const { theta, dist } = nearestCardioidParam(onCurve.x, onCurve.y, GEOM_UNIT);
+  assert.ok(dist < 0.06, `dist ${dist} should be small`);
+  assert.ok(Math.abs(theta - 1.0) < 0.05, `theta ${theta} should be ~1.0`);
+});
+
+test("nearestCardioidParam returns a large distance for a far point", () => {
+  const { dist } = nearestCardioidParam(100, 100, GEOM_UNIT);
+  assert.ok(dist > 1, `dist ${dist} should be large`);
+});
+
+import { tryCatchRail, stepRail } from "../js/physics.js";
+
+const RAIL_GEOM = { cx: 0, cy: 0, scale: 50, rot: 0, cooldown: 60, catchDist: 18, arcScale: 90 };
+const RIDE_GEAR = { engageSpeed: 3, rideAccel: 1, rideCap: 14, spinCost: 4, rideSpinDrain: 0.1, minRideSpeed: 6 };
+
+test("tryCatchRail catches a fast bey sitting on the curve", () => {
+  const on = cardioidPoint(1.0, RAIL_GEOM);
+  const b = bey({ x: on.x, y: on.y, vx: 5, vy: 0, dir: 1, dashCd: 0 });
+  const { bey: next, caught } = tryCatchRail(b, RAIL_GEOM, RIDE_GEAR);
+  assert.equal(caught, true);
+  assert.equal(next.railed, true);
+  assert.equal(next.railDir, 1);
+  assert.equal(next.railSpeed, 6); // speed 5 floored up to minRideSpeed 6
+  assert.ok(Math.abs(next.railTheta - 1.0) < 0.05);
+});
+
+test("tryCatchRail does not catch when too far from the curve", () => {
+  const b = bey({ x: 1000, y: 1000, vx: 5, vy: 0, dashCd: 0 });
+  assert.equal(tryCatchRail(b, RAIL_GEOM, RIDE_GEAR).caught, false);
+});
+
+test("tryCatchRail does not catch below the engage speed", () => {
+  const on = cardioidPoint(1.0, RAIL_GEOM);
+  const b = bey({ x: on.x, y: on.y, vx: 1, vy: 0, dashCd: 0 });
+  assert.equal(tryCatchRail(b, RAIL_GEOM, RIDE_GEAR).caught, false);
+});
+
+test("tryCatchRail does not catch a dead bey", () => {
+  const on = cardioidPoint(1.0, RAIL_GEOM);
+  const b = bey({ x: on.x, y: on.y, vx: 5, vy: 0, alive: false, dashCd: 0 });
+  assert.equal(tryCatchRail(b, RAIL_GEOM, RIDE_GEAR).caught, false);
+});
+
+test("tryCatchRail does not catch a bey already on the rail", () => {
+  const on = cardioidPoint(1.0, RAIL_GEOM);
+  const b = bey({ x: on.x, y: on.y, vx: 5, vy: 0, railed: true, dashCd: 0 });
+  assert.equal(tryCatchRail(b, RAIL_GEOM, RIDE_GEAR).caught, false);
+});
+
+test("tryCatchRail does not catch while on cooldown", () => {
+  const on = cardioidPoint(1.0, RAIL_GEOM);
+  const b = bey({ x: on.x, y: on.y, vx: 5, vy: 0, dashCd: 10 });
+  assert.equal(tryCatchRail(b, RAIL_GEOM, RIDE_GEAR).caught, false);
+});
+
+test("tryCatchRail sets railDir from the bey's spin direction", () => {
+  const on = cardioidPoint(1.0, RAIL_GEOM);
+  const b = bey({ x: on.x, y: on.y, vx: 5, vy: 0, dir: -1, dashCd: 0 });
+  assert.equal(tryCatchRail(b, RAIL_GEOM, RIDE_GEAR).bey.railDir, -1);
+});
+
+test("tryCatchRail does not mutate the input bey", () => {
+  const on = cardioidPoint(1.0, RAIL_GEOM);
+  const b = bey({ x: on.x, y: on.y, vx: 5, vy: 0, dir: 1, dashCd: 0 });
+  tryCatchRail(b, RAIL_GEOM, RIDE_GEAR);
+  assert.equal(b.railed, undefined);
+});
+
+test("stepRail advances theta in railDir and ramps ride speed", () => {
+  const b = bey({ railed: true, railTheta: 1.0, railDir: 1, railSpeed: 6, spin: 100 });
+  const { bey: next, released } = stepRail(b, RAIL_GEOM, RIDE_GEAR);
+  assert.equal(released, false);
+  assert.equal(next.railSpeed, 7);                 // 6 + rideAccel 1
+  assert.ok(next.railTheta > 1.0);                 // advanced forward
+  assert.ok(Math.abs(next.railTheta - (1.0 + 7 / 90)) < 1e-9);
+  const p = cardioidPoint(next.railTheta, RAIL_GEOM);
+  assert.ok(Math.abs(next.x - p.x) < 1e-9 && Math.abs(next.y - p.y) < 1e-9);
+});
+
+test("stepRail advances theta in the negative direction for railDir -1", () => {
+  const b = bey({ railed: true, railTheta: 3.0, railDir: -1, railSpeed: 6, spin: 100 });
+  const { bey: next, released } = stepRail(b, RAIL_GEOM, RIDE_GEAR);
+  assert.equal(released, false);
+  assert.ok(next.railTheta < 3.0);
+  assert.ok(Math.abs(next.railTheta - (3.0 - 7 / 90)) < 1e-9);
+});
+
+test("stepRail clamps ride speed to the gear cap", () => {
+  const b = bey({ railed: true, railTheta: 1.0, railDir: 1, railSpeed: 13.5, spin: 100 });
+  assert.equal(stepRail(b, RAIL_GEOM, RIDE_GEAR).bey.railSpeed, 14);
+});
+
+test("stepRail releases at the cusp (railDir +1) with cooldown and spin cost", () => {
+  const b = bey({ railed: true, railTheta: Math.PI * 2 - 0.01, railDir: 1, railSpeed: 6, spin: 100 });
+  const { bey: next, released } = stepRail(b, RAIL_GEOM, RIDE_GEAR);
+  assert.equal(released, true);
+  assert.equal(next.railed, false);
+  assert.equal(next.dashCd, 60);
+  // spin loses the ride trickle (0.1) then the release cost (4)
+  assert.ok(Math.abs(next.spin - 95.9) < 1e-9);
+});
+
+test("stepRail releases when railDir -1 crosses theta 0", () => {
+  const b = bey({ railed: true, railTheta: 0.01, railDir: -1, railSpeed: 6, spin: 100 });
+  const { bey: next, released } = stepRail(b, RAIL_GEOM, RIDE_GEAR);
+  assert.equal(released, true);
+  assert.equal(next.railed, false);
+  assert.equal(next.dashCd, 60);
+  assert.ok(Math.abs(next.spin - 95.9) < 1e-9);
+});
+
+test("stepRail does not mutate the input bey", () => {
+  const b = bey({ railed: true, railTheta: 1.0, railDir: 1, railSpeed: 6, spin: 100 });
+  stepRail(b, RAIL_GEOM, RIDE_GEAR);
+  assert.equal(b.railTheta, 1.0);
+  assert.equal(b.railSpeed, 6);
 });

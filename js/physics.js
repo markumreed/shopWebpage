@@ -134,29 +134,101 @@ export function decideOutcome(player, opponent) {
   return "draw";
 }
 
-// tryXtremeDash — the X-Celerator rail. When a bey is inside the rail band,
-// moving above the gear's engage speed, and off cooldown, its bit-gear meshes
-// with the rail and it gets an Xtreme Dash: an impulse along its current
-// heading. Pure — returns { bey, fired } and never mutates the input.
-// `rail`  = { inner, outer, cooldown } in absolute units from stadium center.
-// `gear`  = { dashImpulse, engageSpeed, spinCost }.
-export function tryXtremeDash(bey, stadium, rail, gear) {
-  if (!bey.alive || (bey.dashCd ?? 0) > 0) return { bey, fired: false };
+// A cardioid r = 1 − cosθ, recentred so its bounding box centers on the origin,
+// then scaled, rotated, and translated to sit in the stadium. The cusp (θ = 0)
+// is the release point. geom = { cx, cy, scale, rot }.
+const CARDIOID_BBOX_CX = -0.875;    // local bbox-center x (precomputed from the curve)
+export const CARDIOID_MAX_R = 1.34; // upper bound on |point − center| in local units (the
+                                    // true max is ~1.337 near θ≈100°); used for fit scaling
 
-  const d = distance(bey.x, bey.y, stadium.cx, stadium.cy);
-  if (d < rail.inner || d > rail.outer) return { bey, fired: false };
+export function cardioidPoint(theta, geom) {
+  const r = 1 - Math.cos(theta);
+  const lx = r * Math.cos(theta) - CARDIOID_BBOX_CX; // recentre so the shape is centered
+  const ly = r * Math.sin(theta);
+  const c = Math.cos(geom.rot), s = Math.sin(geom.rot);
+  return {
+    x: geom.cx + (lx * c - ly * s) * geom.scale,
+    y: geom.cy + (lx * s + ly * c) * geom.scale,
+  };
+}
+
+// Unit tangent at theta (analytic derivative of the local parametric form,
+// rotated to match geom.rot). Independent of scale. Degenerate at the cusp.
+export function cardioidTangent(theta, geom) {
+  const lx = Math.sin(theta) * (2 * Math.cos(theta) - 1);
+  const ly = Math.cos(theta) - Math.cos(2 * theta);
+  const c = Math.cos(geom.rot), s = Math.sin(geom.rot);
+  const rx = lx * c - ly * s;
+  const ry = lx * s + ly * c;
+  const mag = Math.hypot(rx, ry);
+  if (mag < 1e-9) return { x: 0, y: 0 }; // cusp: tangent is degenerate
+  return { x: rx / mag, y: ry / mag };
+}
+
+// Closest sampled point on the cardioid to (x, y): returns its theta and distance.
+export function nearestCardioidParam(x, y, geom, samples = 180) {
+  let best = Infinity, bestTheta = 0;
+  for (let i = 0; i < samples; i++) {
+    const theta = (i / samples) * Math.PI * 2;
+    const p = cardioidPoint(theta, geom);
+    const d = Math.hypot(p.x - x, p.y - y);
+    if (d < best) { best = d; bestTheta = theta; }
+  }
+  return { theta: bestTheta, dist: best };
+}
+
+// tryCatchRail — a free bey "catches" the cardioid rail when it passes close
+// enough while moving fast enough. On catch it locks onto the curve at the
+// nearest theta, riding in its spin direction. Pure — returns { bey, caught }.
+// `geom` = { cx, cy, scale, rot, cooldown, catchDist, arcScale }.
+// `gear` = { engageSpeed, rideAccel, rideCap, spinCost, rideSpinDrain, minRideSpeed }.
+export function tryCatchRail(bey, geom, gear) {
+  if (!(bey.alive ?? true) || bey.railed || (bey.dashCd ?? 0) > 0) return { bey, caught: false };
+
+  const { theta, dist } = nearestCardioidParam(bey.x, bey.y, geom);
+  if (dist > geom.catchDist) return { bey, caught: false };
 
   const speed = Math.hypot(bey.vx, bey.vy);
-  if (speed < gear.engageSpeed) return { bey, fired: false };
+  if (speed < gear.engageSpeed) return { bey, caught: false };
 
-  const ux = bey.vx / speed;
-  const uy = bey.vy / speed;
   const next = {
     ...bey,
-    vx: bey.vx + ux * gear.dashImpulse,
-    vy: bey.vy + uy * gear.dashImpulse,
-    spin: Math.max(0, bey.spin - gear.spinCost),
-    dashCd: rail.cooldown,
+    railed: true,
+    railTheta: theta,
+    railDir: bey.dir ?? 1,
+    railSpeed: Math.max(speed, gear.minRideSpeed),
   };
-  return { bey: next, fired: true };
+  return { bey: next, caught: true };
 }
+
+// stepRail — advance a railed bey one frame: accelerate, move along the curve,
+// and release off the cusp (theta = 0 / 2π) in the ride direction. On release
+// the bey leaves the rail with a cooldown and a spin cost; the caller aims its
+// velocity. Pure — returns { bey, released }. Assumes bey.railed is true.
+export function stepRail(bey, geom, gear) {
+  const railSpeed = Math.min(gear.rideCap, (bey.railSpeed ?? 0) + gear.rideAccel);
+  const dir = bey.railDir ?? 1;
+  let nextTheta = (bey.railTheta ?? 0) + dir * (railSpeed / geom.arcScale);
+
+  let released = false;
+  if (dir > 0 && nextTheta >= Math.PI * 2) { released = true; nextTheta = 0; }
+  else if (dir < 0 && nextTheta <= 0) { released = true; nextTheta = 0; }
+
+  const p = cardioidPoint(nextTheta, geom);
+  const t = cardioidTangent(nextTheta, geom);
+  const next = {
+    ...bey,
+    x: p.x, y: p.y,
+    vx: t.x * railSpeed, vy: t.y * railSpeed,
+    railTheta: nextTheta,
+    railSpeed,
+    spin: Math.max(0, bey.spin - gear.rideSpinDrain),
+  };
+  if (released) {
+    next.railed = false;
+    next.dashCd = geom.cooldown;
+    next.spin = Math.max(0, next.spin - gear.spinCost);
+  }
+  return { bey: next, released };
+}
+
