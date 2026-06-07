@@ -736,6 +736,7 @@ export function mountArena(opts) {
     applyPlayerBuild();
   });
   syncSetupControls();
+  renderPlayerBuild(); // initialize stats + HUD images to match the default build
 
   return { open, close };
 }
