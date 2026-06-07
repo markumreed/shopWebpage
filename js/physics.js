@@ -32,7 +32,10 @@ export function stepBey(bey, stadium, params) {
 }
 
 export function resolveCollision(a, b, params) {
-  const { restitution, collisionSpinDrain, superDrain = 0 } = params;
+  const {
+    restitution, collisionSpinDrain, superDrain = 0,
+    oppositeSpinMult = 1, sameSpinMult = 1,
+  } = params;
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const dist = Math.hypot(dx, dy);
@@ -71,9 +74,12 @@ export function resolveCollision(a, b, params) {
   b2.x = b.x + nx * (overlap / 2);
   b2.y = b.y + ny * (overlap / 2);
 
-  // both lose spin on contact
-  a2.spin = Math.max(0, a.spin - collisionSpinDrain);
-  b2.spin = Math.max(0, b.spin - collisionSpinDrain);
+  // both lose spin on contact; opposite spin directions "spin-steal" — they
+  // drain harder than same-spin clashes. Beys without a `dir` default to +1.
+  const sameDir = (a.dir ?? 1) === (b.dir ?? 1);
+  const drain = collisionSpinDrain * (sameDir ? sameSpinMult : oppositeSpinMult);
+  a2.spin = Math.max(0, a.spin - drain);
+  b2.spin = Math.max(0, b.spin - drain);
 
   // special attack: a bey with `special` set drains extra spin from the other,
   // then its flag clears (one-shot).
@@ -126,4 +132,31 @@ export function decideOutcome(player, opponent) {
   if (player.alive && !opponent.alive) return "player";
   if (!player.alive && opponent.alive) return "opponent";
   return "draw";
+}
+
+// tryXtremeDash — the X-Celerator rail. When a bey is inside the rail band,
+// moving above the gear's engage speed, and off cooldown, its bit-gear meshes
+// with the rail and it gets an Xtreme Dash: an impulse along its current
+// heading. Pure — returns { bey, fired } and never mutates the input.
+// `rail`  = { inner, outer, cooldown } in absolute units from stadium center.
+// `gear`  = { dashImpulse, engageSpeed, spinCost }.
+export function tryXtremeDash(bey, stadium, rail, gear) {
+  if (!bey.alive || (bey.dashCd ?? 0) > 0) return { bey, fired: false };
+
+  const d = distance(bey.x, bey.y, stadium.cx, stadium.cy);
+  if (d < rail.inner || d > rail.outer) return { bey, fired: false };
+
+  const speed = Math.hypot(bey.vx, bey.vy);
+  if (speed < gear.engageSpeed) return { bey, fired: false };
+
+  const ux = bey.vx / speed;
+  const uy = bey.vy / speed;
+  const next = {
+    ...bey,
+    vx: bey.vx + ux * gear.dashImpulse,
+    vy: bey.vy + uy * gear.dashImpulse,
+    spin: Math.max(0, bey.spin - gear.spinCost),
+    dashCd: rail.cooldown,
+  };
+  return { bey: next, fired: true };
 }
