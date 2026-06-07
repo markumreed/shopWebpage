@@ -100,6 +100,13 @@ export function special() {
   noise(0.25, 0.16, 3200, 3);
 }
 
+// Xtreme Dash — a fast upward rev with a whoosh as the bit-gear meshes.
+export function xtreme() {
+  blip("sawtooth", 220, 0.3, 0.26, { glideTo: 1200 });
+  blip("square", 440, 0.22, 0.12, { glideTo: 1600, delay: 0.02 });
+  noise(0.28, 0.14, 2600, 1.2);
+}
+
 // Big knock-out-of-ring explosion.
 export function ringOut() {
   noise(0.55, 0.4, 600, 0.7);
