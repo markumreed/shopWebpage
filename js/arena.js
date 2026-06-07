@@ -58,6 +58,16 @@ export function mountArena(opts) {
     arcScale: RAIL_ARC_SCALE,
   };
 
+  // blade-image cache: the bowl draws each bey's blade render, preloaded so it's
+  // ready by battle. imgFor returns a cached HTMLImageElement per src.
+  const imgCache = new Map();
+  function imgFor(src) {
+    let im = imgCache.get(src);
+    if (!im) { im = new Image(); im.src = src; imgCache.set(src, im); }
+    return im;
+  }
+  BLADES.forEach((b) => imgFor(b.image)); // warm the cache
+
   let player, opponent, phase, raf, charging, power, wasColliding, bursts;
   let playerDir = 1, rivalDir = 1;
   let playerBuild = { blade: BLADES[0], ratchet: RATCHETS[0], bit: BITS[0] };
@@ -144,6 +154,8 @@ export function mountArena(opts) {
     rivalBuild = randomBuild();
     player = makeBey("You", stadium.cx - 120, stadium.cy, "#2bf2ff", playerDir, buildProfile(playerBuild));
     opponent = makeBey("Rival", stadium.cx + 120, stadium.cy, "#ff2bd6", rivalDir, buildProfile(rivalBuild));
+    player.img = imgFor(playerBuild.blade.image);
+    opponent.img = imgFor(rivalBuild.blade.image);
     phase = "ready"; // ready -> spinning -> done
     charging = false;
     power = 0;
@@ -561,7 +573,7 @@ export function mountArena(opts) {
 
     ctx.translate(b.x + wx, b.y + wy);
 
-    // motion-blur energy ring: brighter/larger the faster it spins
+    // motion-blur energy ring: brighter/larger the faster it spins (both looks)
     ctx.save();
     ctx.shadowColor = b.color;
     ctx.shadowBlur = 22;
@@ -572,11 +584,24 @@ export function mountArena(opts) {
       const sweep = 0.7 + frac * 1.4;
       const off = b.rot * 0.5 + (i * Math.PI * 2) / 3;
       ctx.beginPath();
-      ctx.arc(0, 0, r * 1.22, off, off + sweep);
+      ctx.arc(0, 0, r * 1.3, off, off + sweep);
       ctx.stroke();
     }
     ctx.restore();
 
+    const img = b.img;
+    if (img && img.complete && img.naturalWidth > 0) {
+      // the actual blade render, rotated by its spin angle
+      ctx.save();
+      ctx.rotate(b.rot);
+      const s = r * 2.4;
+      ctx.drawImage(img, -s / 2, -s / 2, s, s);
+      ctx.restore();
+      ctx.restore();
+      return;
+    }
+
+    // ---- fallback: procedural metal top (when the image isn't ready) ----
     // spinning metal attack ring — ghosted copies simulate motion blur
     ctx.save();
     ctx.rotate(b.rot);
