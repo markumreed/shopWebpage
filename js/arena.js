@@ -591,8 +591,10 @@ export function mountArena(opts) {
 
     const img = b.img;
     if (img && img.complete && img.naturalWidth > 0) {
-      // the actual blade render, rotated by its spin angle
+      // the actual blade render, rotated by its spin angle; fades as spin runs
+      // down so the image path "winds down" like the procedural top.
       ctx.save();
+      ctx.globalAlpha = 0.4 + 0.6 * frac;
       ctx.rotate(b.rot);
       const s = r * 2.4;
       ctx.drawImage(img, -s / 2, -s / 2, s, s);
