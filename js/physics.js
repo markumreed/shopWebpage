@@ -7,10 +7,12 @@ export function distance(ax, ay, bx, by) {
 export function stepBey(bey, stadium, params) {
   if (!bey.alive) return bey;
   const { dt, friction, spinDecay, centering } = params;
+  const centeringMult = bey.centeringMult ?? 1;
+  const spinDecayMult = bey.spinDecayMult ?? 1;
 
-  // bowl centering force toward stadium center
-  const ax = (stadium.cx - bey.x) * centering;
-  const ay = (stadium.cy - bey.y) * centering;
+  // bowl centering force toward stadium center (scaled per-bey)
+  const ax = (stadium.cx - bey.x) * centering * centeringMult;
+  const ay = (stadium.cy - bey.y) * centering * centeringMult;
 
   let vx = (bey.vx + ax * dt) * (1 - friction * dt);
   let vy = (bey.vy + ay * dt) * (1 - friction * dt);
@@ -18,7 +20,7 @@ export function stepBey(bey, stadium, params) {
   const x = bey.x + vx * dt;
   const y = bey.y + vy * dt;
 
-  let spin = bey.spin - spinDecay * dt;
+  let spin = bey.spin - spinDecay * spinDecayMult * dt;
   let alive = true;
   if (spin <= 0) {
     spin = 0;
@@ -78,8 +80,12 @@ export function resolveCollision(a, b, params) {
   // drain harder than same-spin clashes. Beys without a `dir` default to +1.
   const sameDir = (a.dir ?? 1) === (b.dir ?? 1);
   const drain = collisionSpinDrain * (sameDir ? sameSpinMult : oppositeSpinMult);
-  a2.spin = Math.max(0, a.spin - drain);
-  b2.spin = Math.max(0, b.spin - drain);
+  // each bey's loss scales with the OTHER's attack and its own defense
+  // (mults default to 1, so a build-less bey drains exactly as before).
+  const aLoss = drain * (b.atkMult ?? 1) / (a.defMult ?? 1);
+  const bLoss = drain * (a.atkMult ?? 1) / (b.defMult ?? 1);
+  a2.spin = Math.max(0, a.spin - aLoss);
+  b2.spin = Math.max(0, b.spin - bLoss);
 
   // special attack: a bey with `special` set drains extra spin from the other,
   // then its flag clears (one-shot).

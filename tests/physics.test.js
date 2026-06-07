@@ -377,3 +377,41 @@ test("stepRail does not mutate the input bey", () => {
   assert.equal(b.railTheta, 1.0);
   assert.equal(b.railSpeed, 6);
 });
+
+test("stepBey scales spin decay by the bey's spinDecayMult", () => {
+  const fast = stepBey(bey({ spin: 100, spinDecayMult: 2 }), STADIUM, PARAMS);
+  const norm = stepBey(bey({ spin: 100 }), STADIUM, PARAMS);
+  assert.equal(norm.spin, 99);   // default: loses spinDecay*dt = 1
+  assert.equal(fast.spin, 98);   // 2x decay
+});
+
+test("stepBey scales the centering force by the bey's centeringMult", () => {
+  // off-center bey: stronger centering pulls velocity inward harder (more negative)
+  const strong = stepBey(bey({ x: 50, y: 0, centeringMult: 2 }), STADIUM, PARAMS);
+  const normal = stepBey(bey({ x: 50, y: 0 }), STADIUM, PARAMS);
+  assert.ok(strong.vx < normal.vx, "stronger centering => more inward vx");
+});
+
+test("resolveCollision: drain is asymmetric by attacker atkMult and defender defMult", () => {
+  // a hits hard (atkMult 2), b has no defense bonus => b loses double
+  const a = bey({ x: -5, y: 0, spin: 50, atkMult: 2 });
+  const b = bey({ x: 5, y: 0, spin: 50 });
+  const [a2, b2] = resolveCollision(a, b, { restitution: 1, collisionSpinDrain: 5 });
+  assert.equal(a2.spin, 45); // a loses base drain (b.atkMult defaults 1)
+  assert.equal(b2.spin, 40); // b loses base*2 (a.atkMult 2)
+});
+
+test("resolveCollision: a defender's defMult reduces the spin it loses", () => {
+  const a = bey({ x: -5, y: 0, spin: 50 });
+  const b = bey({ x: 5, y: 0, spin: 50, defMult: 2 });
+  const [, b2] = resolveCollision(a, b, { restitution: 1, collisionSpinDrain: 5 });
+  assert.equal(b2.spin, 47.5); // base 5 / defMult 2 = 2.5 lost
+});
+
+test("resolveCollision: with no atk/def mults, drain stays symmetric (regression)", () => {
+  const a = bey({ x: -5, y: 0, spin: 50 });
+  const b = bey({ x: 5, y: 0, spin: 50 });
+  const [a2, b2] = resolveCollision(a, b, { restitution: 1, collisionSpinDrain: 5 });
+  assert.equal(a2.spin, 45);
+  assert.equal(b2.spin, 45);
+});
