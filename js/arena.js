@@ -8,8 +8,9 @@ const STADIUM_PARAMS = { dt: 1, friction: 0.012, spinDecay: 0.08, centering: 0.0
 const COLLISION = { restitution: 1.05, collisionSpinDrain: 1.5, superDrain: 25 };
 const START_SPIN = 100;
 const BURST_GAIN = 20;        // player burst-meter % gained per clash
-const AI_BURST_GAIN = 26;     // rival charges its special faster (difficulty)
-const AI_SPIN_BONUS = 1.12;   // rival launches with a spin-stamina advantage
+const AI_BURST_GAIN = 17;     // rival charges its special a touch slower than you
+const AI_SPIN_BONUS = 1.0;    // rival no longer launches with a stamina advantage
+const AI_AGGRESSION = 0.7;    // rival steers less relentlessly (difficulty)
 const SPECIAL_DASH = 8;       // velocity impulse added on special activation
 const STREAK_KEY = "arena.streak";
 
@@ -148,11 +149,11 @@ export function mountArena(opts) {
     player.spin = START_SPIN * (0.6 + 0.4 * (power / 100));
     sfx.launch(power / 100);
 
-    // AI launches a hard, accurate strike: it leads the player's position and
-    // commits a strong, near-on-target shot (only a small spread), and starts
-    // with a spin-stamina advantage. It then keeps steering during the round.
-    const aiAngle = Math.atan2(player.y - opponent.y, player.x - opponent.x) + (Math.random() - 0.5) * 0.3;
-    const aiSpeed = 8 + Math.random() * 3;
+    // AI launches a committed strike toward the player, but its aim now carries
+    // a wider spread and its speed is a bit lower, so it whiffs more often and
+    // hits softer. It still steers during the round, just less relentlessly.
+    const aiAngle = Math.atan2(player.y - opponent.y, player.x - opponent.x) + (Math.random() - 0.5) * 0.6;
+    const aiSpeed = 6 + Math.random() * 3;
     opponent.vx = Math.cos(aiAngle) * aiSpeed;
     opponent.vy = Math.sin(aiAngle) * aiSpeed;
     opponent.spin = START_SPIN * AI_SPIN_BONUS;
@@ -228,7 +229,7 @@ export function mountArena(opts) {
     const pPrev = player.alive, oPrev = opponent.alive;
 
     // AI agency: steer the rival each frame (seek when ahead, survive when behind)
-    const steer = aiSteer(opponent, player, stadium, 1);
+    const steer = aiSteer(opponent, player, stadium, AI_AGGRESSION);
     opponent.vx += steer.ax;
     opponent.vy += steer.ay;
 
