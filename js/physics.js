@@ -82,8 +82,10 @@ export function resolveCollision(a, b, params) {
   const drain = collisionSpinDrain * (sameDir ? sameSpinMult : oppositeSpinMult);
   // each bey's loss scales with the OTHER's attack and its own defense
   // (mults default to 1, so a build-less bey drains exactly as before).
-  const aLoss = drain * (b.atkMult ?? 1) / (a.defMult ?? 1);
-  const bLoss = drain * (a.atkMult ?? 1) / (b.defMult ?? 1);
+  // clamp the defense divisor so a stray non-positive defMult can't produce
+  // Infinity spin loss (real builds yield 0.7..1.3 via statsToPhysics).
+  const aLoss = drain * (b.atkMult ?? 1) / Math.max(a.defMult ?? 1, 0.01);
+  const bLoss = drain * (a.atkMult ?? 1) / Math.max(b.defMult ?? 1, 0.01);
   a2.spin = Math.max(0, a.spin - aLoss);
   b2.spin = Math.max(0, b.spin - bLoss);
 

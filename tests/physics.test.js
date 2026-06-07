@@ -380,8 +380,8 @@ test("stepRail does not mutate the input bey", () => {
 
 test("stepBey scales spin decay by the bey's spinDecayMult", () => {
   const fast = stepBey(bey({ spin: 100, spinDecayMult: 2 }), STADIUM, PARAMS);
-  const norm = stepBey(bey({ spin: 100 }), STADIUM, PARAMS);
-  assert.equal(norm.spin, 99);   // default: loses spinDecay*dt = 1
+  const defaultBey = stepBey(bey({ spin: 100 }), STADIUM, PARAMS);
+  assert.equal(defaultBey.spin, 99);   // default: loses spinDecay*dt = 1
   assert.equal(fast.spin, 98);   // 2x decay
 });
 
@@ -406,6 +406,13 @@ test("resolveCollision: a defender's defMult reduces the spin it loses", () => {
   const b = bey({ x: 5, y: 0, spin: 50, defMult: 2 });
   const [, b2] = resolveCollision(a, b, { restitution: 1, collisionSpinDrain: 5 });
   assert.equal(b2.spin, 47.5); // base 5 / defMult 2 = 2.5 lost
+});
+
+test("resolveCollision: attacker atkMult and defender defMult cancel when equal", () => {
+  const a = bey({ x: -5, y: 0, spin: 50, atkMult: 2 });
+  const b = bey({ x: 5, y: 0, spin: 50, defMult: 2 });
+  const [, b2] = resolveCollision(a, b, { restitution: 1, collisionSpinDrain: 5 });
+  assert.equal(b2.spin, 45); // 5 * atkMult 2 / defMult 2 = 5 — net same as default
 });
 
 test("resolveCollision: with no atk/def mults, drain stays symmetric (regression)", () => {
