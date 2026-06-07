@@ -53,3 +53,25 @@ export function statsToPhysics(stats) {
     gear:          xDashToGear(stats.xDash),
   };
 }
+
+// Per-stat bar maxima for the builder graph: the summed atk/def/sta share the
+// summed-stat ceiling; xDash and burstResistance use their own ranges (matching
+// statsToPhysics). Each bar fills relative to its own realistic max.
+const BAR_MAX = { attack: 150, defense: 150, stamina: 150, xDash: 45, burstResistance: 80 };
+const BAR_ROWS = [
+  { key: "attack", label: "ATK" },
+  { key: "defense", label: "DEF" },
+  { key: "stamina", label: "STA" },
+  { key: "xDash", label: "X" },
+  { key: "burstResistance", label: "BR" },
+];
+
+// buildBars — turn combined stats into rows for the builder's bar graph:
+// { label, value (raw), pct (0-100, clamped, normalized to that stat's max) }.
+export function buildBars(stats) {
+  return BAR_ROWS.map(({ key, label }) => ({
+    label,
+    value: stats[key],
+    pct: Math.round(clamp01(stats[key] / BAR_MAX[key]) * 100),
+  }));
+}

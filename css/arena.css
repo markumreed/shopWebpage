@@ -144,13 +144,8 @@ body.battling .topbar { filter: brightness(.25) saturate(.4); transition: filter
 @keyframes callout-pop { from { transform: scale(.4) rotate(-4deg); opacity: 0; }
   to { transform: scale(1) rotate(-4deg); opacity: 1; } }
 
-/* Build picker */
-.build-picker { gap: 6px; }
-.build-selects { display: flex; gap: 6px; }
 .part-select { background: #15122b; color: #eaf7ff; border: 1px solid #2bf2ff;
   font-size: 11px; padding: 5px 6px; text-transform: uppercase; letter-spacing: .5px; }
-.build-stats { margin: 0; font-size: 11px; letter-spacing: 1px; color: #2bf2ff;
-  text-transform: uppercase; min-height: 1em; }
 
 /* Part thumbnails under each spin meter */
 .build-imgs { display: flex; gap: 3px; }

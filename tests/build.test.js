@@ -65,3 +65,29 @@ test("xDashToGear is monotonic and bounded", () => {
   assert.ok(hi.rideSpinDrain > lo.rideSpinDrain);  // higher xDash = more drain while riding
   assert.ok(hi.minRideSpeed > lo.minRideSpeed);    // higher xDash = faster minimum ride speed
 });
+
+import { buildBars } from "../js/build.js";
+
+test("buildBars returns one row per stat in fixed order with raw values", () => {
+  const rows = buildBars({ attack: 60, defense: 40, stamina: 30, xDash: 25, burstResistance: 55 });
+  assert.deepEqual(rows.map(r => r.label), ["ATK", "DEF", "STA", "X", "BR"]);
+  assert.deepEqual(rows.map(r => r.value), [60, 40, 30, 25, 55]);
+});
+
+test("buildBars normalizes each stat to its own max as a 0-100 percent", () => {
+  const rows = buildBars({ attack: 75, defense: 150, stamina: 0, xDash: 45, burstResistance: 40 });
+  const pct = Object.fromEntries(rows.map(r => [r.label, r.pct]));
+  assert.equal(pct.ATK, 50);  // 75 / 150
+  assert.equal(pct.DEF, 100); // 150 / 150
+  assert.equal(pct.STA, 0);   // 0 / 150
+  assert.equal(pct.X, 100);   // 45 / 45
+  assert.equal(pct.BR, 50);   // 40 / 80
+});
+
+test("buildBars clamps percent to 100 when a stat exceeds its max", () => {
+  const rows = buildBars({ attack: 300, defense: 0, stamina: 0, xDash: 90, burstResistance: 160 });
+  const pct = Object.fromEntries(rows.map(r => [r.label, r.pct]));
+  assert.equal(pct.ATK, 100);
+  assert.equal(pct.X, 100);
+  assert.equal(pct.BR, 100);
+});

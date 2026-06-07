@@ -1,0 +1,31 @@
+/* Builder screen — full-screen overlay reached from the red button */
+.builder { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 35%, #161226, #07060f 70%);
+  font-family: var(--display, sans-serif); color: #eaf7ff; }
+.builder[hidden] { display: none; }
+.builder-panel { position: relative; width: min(680px, 92vw); background: rgba(12,10,26,.92);
+  border: 1.5px solid #2bf2ff; border-radius: 14px; padding: 28px 26px 26px;
+  box-shadow: 0 0 40px rgba(43,242,255,.25); text-align: center; }
+.builder-close { position: absolute; top: 10px; right: 12px; background: none; border: 0;
+  color: #eaf7ff; font-size: 22px; cursor: pointer; opacity: .7; }
+.builder-close:hover { opacity: 1; }
+.builder-title { margin: 0 0 18px; font-size: clamp(22px, 5vw, 36px); letter-spacing: 2px;
+  text-transform: uppercase; }
+.builder-title span { color: #ff2bd6; text-shadow: 0 0 16px rgba(255,43,214,.7); }
+.builder-body { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.builder-preview { flex: 0 0 200px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.builder-blade-img { width: 180px; height: 180px; object-fit: contain;
+  background: rgba(255,255,255,.05); border-radius: 12px; }
+.builder-name { margin: 0; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: #2bf2ff; }
+.builder-config { flex: 1 1 300px; min-width: 260px; display: flex; flex-direction: column; gap: 16px; }
+.builder-selects { display: flex; flex-direction: column; gap: 8px; }
+.builder-field { display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
+.builder-field .part-select { flex: 1; }
+.builder-graph { display: flex; flex-direction: column; gap: 6px; }
+.bar-row { display: grid; grid-template-columns: 34px 1fr 32px; align-items: center; gap: 8px; }
+.bar-label { font-size: 11px; letter-spacing: 1px; color: rgba(234,247,255,.85); text-align: right; }
+.bar-track { height: 12px; background: #15122b; border: 1px solid rgba(43,242,255,.4); border-radius: 6px; overflow: hidden; }
+.bar-fill { height: 100%; background: linear-gradient(90deg, #2bf2ff, #ff2bd6); transition: width .15s ease; }
+.bar-val { font-size: 11px; color: #eaf7ff; text-align: left; }
+.builder-battle { margin-top: 22px; }

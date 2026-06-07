@@ -4,6 +4,7 @@ import {
   addItem, setQty, cartCount, cartSubtotal, saveCart, loadCart
 } from "./cart.js";
 import { mountArena } from "./arena.js";
+import { mountBuilder } from "./builder.js";
 
 let cart = loadCart();
 
@@ -186,15 +187,23 @@ function init() {
     muteEl: $("#arena-mute"),
     spinDirEl: $("#spin-dir"),
     rivalSetupEl: $("#rival-setup"),
+    buildYouEl: $("#build-you"),
+    buildRivalEl: $("#build-rival"),
+    onExit: () => builder.open(),
+  });
+  const builder = mountBuilder({
+    overlayEl: $("#builder"),
     bladeSelEl: $("#sel-blade"),
     ratchetSelEl: $("#sel-ratchet"),
     bitSelEl: $("#sel-bit"),
-    buildStatsEl: $("#build-stats"),
-    buildYouEl: $("#build-you"),
-    buildRivalEl: $("#build-rival"),
-    onExit: () => {}
+    graphEl: $("#builder-graph"),
+    previewEl: $("#builder-blade-img"),
+    nameEl: $("#builder-name"),
+    battleBtnEl: $("#builder-battle"),
+    closeBtnEl: $("#builder-close"),
+    onBattle: (build) => arena.open(build),
   });
-  $("#red-button").addEventListener("click", arena.open);
+  $("#red-button").addEventListener("click", () => builder.open());
   $("#arena-exit").addEventListener("click", arena.close);
 }
 

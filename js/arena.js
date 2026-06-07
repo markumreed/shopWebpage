@@ -44,8 +44,7 @@ export function mountArena(opts) {
     overlayEl, canvasEl, angleEl, powerFillEl, launchEl, rematchEl, bannerEl, onExit,
     meterYouEl, meterRivalEl, scoreYouEl, scoreRivalEl, streakEl,
     burstFillEl, specialEl, nextRoundEl, calloutEl, muteEl,
-    spinDirEl, rivalSetupEl,
-    bladeSelEl, ratchetSelEl, bitSelEl, buildStatsEl, buildYouEl, buildRivalEl,
+    spinDirEl, rivalSetupEl, buildYouEl, buildRivalEl,
   } = opts;
   const ctx = canvasEl.getContext("2d");
   const W = canvasEl.width, H = canvasEl.height;
@@ -58,6 +57,16 @@ export function mountArena(opts) {
     catchDist: RAIL_CATCH_DIST,
     arcScale: RAIL_ARC_SCALE,
   };
+
+  // blade-image cache: the bowl draws each bey's blade render, preloaded so it's
+  // ready by battle. imgFor returns a cached HTMLImageElement per src.
+  const imgCache = new Map();
+  function imgFor(src) {
+    let im = imgCache.get(src);
+    if (!im) { im = new Image(); im.src = src; imgCache.set(src, im); }
+    return im;
+  }
+  BLADES.forEach((b) => imgFor(b.image)); // warm the cache
 
   let player, opponent, phase, raf, charging, power, wasColliding, bursts;
   let playerDir = 1, rivalDir = 1;
@@ -116,20 +125,9 @@ export function mountArena(opts) {
 
   function setSetupEnabled(on) {
     spinDirEl.querySelectorAll(".seg-btn").forEach((b) => { b.disabled = !on; });
-    [bladeSelEl, ratchetSelEl, bitSelEl].forEach((s) => { s.disabled = !on; });
   }
 
-  // ---- build picker + HUD part images ----
-  function fillSelect(sel, arr) {
-    sel.innerHTML = "";
-    arr.forEach((p, i) => {
-      const o = document.createElement("option");
-      o.value = String(i);
-      o.textContent = p.name;
-      sel.appendChild(o);
-    });
-  }
-
+  // ---- build HUD part images ----
   function renderBuildImages(container, build) {
     container.innerHTML = "";
     [build.blade, build.ratchet, build.bit].forEach((p) => {
@@ -141,21 +139,6 @@ export function mountArena(opts) {
       img.onerror = () => { img.style.visibility = "hidden"; }; // tolerate missing assets
       container.appendChild(img);
     });
-  }
-
-  function renderPlayerBuild() {
-    const s = combineStats(playerBuild.blade, playerBuild.ratchet, playerBuild.bit);
-    buildStatsEl.textContent =
-      `ATK ${s.attack} · DEF ${s.defense} · STA ${s.stamina} · X ${s.xDash} · BR ${s.burstResistance}`;
-    renderBuildImages(buildYouEl, playerBuild);
-  }
-
-  // Rebuild the idle player bey so a part change takes effect before launch.
-  function applyPlayerBuild() {
-    if (phase !== "ready") return;
-    player = makeBey("You", stadium.cx - 120, stadium.cy, "#2bf2ff", playerDir, buildProfile(playerBuild));
-    renderPlayerBuild();
-    draw();
   }
 
   // ---- match / round lifecycle ----
@@ -171,6 +154,8 @@ export function mountArena(opts) {
     rivalBuild = randomBuild();
     player = makeBey("You", stadium.cx - 120, stadium.cy, "#2bf2ff", playerDir, buildProfile(playerBuild));
     opponent = makeBey("Rival", stadium.cx + 120, stadium.cy, "#ff2bd6", rivalDir, buildProfile(rivalBuild));
+    player.img = imgFor(playerBuild.blade.image);
+    opponent.img = imgFor(rivalBuild.blade.image);
     phase = "ready"; // ready -> spinning -> done
     charging = false;
     power = 0;
@@ -194,7 +179,7 @@ export function mountArena(opts) {
     setSetupEnabled(true);
     syncSetupControls();
     renderRivalSetup();
-    renderPlayerBuild();
+    renderBuildImages(buildYouEl, playerBuild);
     renderBuildImages(buildRivalEl, rivalBuild);
     draw();
   }
@@ -588,7 +573,7 @@ export function mountArena(opts) {
 
     ctx.translate(b.x + wx, b.y + wy);
 
-    // motion-blur energy ring: brighter/larger the faster it spins
+    // motion-blur energy ring: brighter/larger the faster it spins (both looks)
     ctx.save();
     ctx.shadowColor = b.color;
     ctx.shadowBlur = 22;
@@ -599,11 +584,26 @@ export function mountArena(opts) {
       const sweep = 0.7 + frac * 1.4;
       const off = b.rot * 0.5 + (i * Math.PI * 2) / 3;
       ctx.beginPath();
-      ctx.arc(0, 0, r * 1.22, off, off + sweep);
+      ctx.arc(0, 0, r * 1.3, off, off + sweep);
       ctx.stroke();
     }
     ctx.restore();
 
+    const img = b.img;
+    if (img && img.complete && img.naturalWidth > 0) {
+      // the actual blade render, rotated by its spin angle; fades as spin runs
+      // down so the image path "winds down" like the procedural top.
+      ctx.save();
+      ctx.globalAlpha = 0.4 + 0.6 * frac;
+      ctx.rotate(b.rot);
+      const s = r * 2.4;
+      ctx.drawImage(img, -s / 2, -s / 2, s, s);
+      ctx.restore();
+      ctx.restore();
+      return;
+    }
+
+    // ---- fallback: procedural metal top (when the image isn't ready) ----
     // spinning metal attack ring — ghosted copies simulate motion blur
     ctx.save();
     ctx.rotate(b.rot);
@@ -665,7 +665,8 @@ export function mountArena(opts) {
   }
 
   // ---- open/close ----
-  function open() {
+  function open(build) {
+    if (build) playerBuild = build;
     cancelAnimationFrame(raf); // stop any ghost loop before re-initialising
     overlayEl.hidden = false;
     document.body.classList.add("battling");
@@ -726,27 +727,7 @@ export function mountArena(opts) {
     syncSetupControls();
     draw();
   });
-  // populate the part dropdowns once and wire change handlers
-  fillSelect(bladeSelEl, BLADES);
-  fillSelect(ratchetSelEl, RATCHETS);
-  fillSelect(bitSelEl, BITS);
-  bladeSelEl.addEventListener("change", () => {
-    if (phase !== "ready") return;
-    playerBuild = { ...playerBuild, blade: BLADES[Number(bladeSelEl.value)] };
-    applyPlayerBuild();
-  });
-  ratchetSelEl.addEventListener("change", () => {
-    if (phase !== "ready") return;
-    playerBuild = { ...playerBuild, ratchet: RATCHETS[Number(ratchetSelEl.value)] };
-    applyPlayerBuild();
-  });
-  bitSelEl.addEventListener("change", () => {
-    if (phase !== "ready") return;
-    playerBuild = { ...playerBuild, bit: BITS[Number(bitSelEl.value)] };
-    applyPlayerBuild();
-  });
   syncSetupControls();
-  renderPlayerBuild(); // initialize stats + HUD images to match the default build
 
   return { open, close };
 }
