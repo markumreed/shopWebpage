@@ -258,7 +258,7 @@ import { cardioidPoint, cardioidTangent, nearestCardioidParam, CARDIOID_MAX_R } 
 
 // shared float comparison for the geometry tests
 function approx(actual, expected, eps = 1e-9) {
-  assert.ok(Math.abs(actual - expected) <= eps, `expected ${actual} ≈ ${expected}`);
+  assert.ok(Math.abs(actual - expected) <= eps, `got ${actual}, expected ≈ ${expected}`);
 }
 
 const GEOM_UNIT = { cx: 0, cy: 0, scale: 1, rot: 0 };
@@ -287,6 +287,30 @@ test("cardioidTangent returns a unit vector with the expected direction at PI/2"
   approx(Math.hypot(t.x, t.y), 1, 1e-9);
   approx(t.x, -Math.SQRT1_2, 1e-9);
   approx(t.y, Math.SQRT1_2, 1e-9);
+});
+
+test("cardioidTangent returns a zero vector at the degenerate cusp (theta=0)", () => {
+  const t = cardioidTangent(0, GEOM_UNIT);
+  assert.equal(t.x, 0);
+  assert.equal(t.y, 0);
+});
+
+test("cardioidPoint applies scale", () => {
+  const p = cardioidPoint(0, { cx: 0, cy: 0, scale: 2, rot: 0 });
+  approx(p.x, 0.875 * 2);
+  approx(p.y, 0);
+});
+
+test("cardioidPoint applies rotation: cusp rotates 90 degrees onto the +y axis", () => {
+  const p = cardioidPoint(0, { cx: 0, cy: 0, scale: 1, rot: Math.PI / 2 });
+  approx(p.x, 0, 1e-9);
+  approx(p.y, 0.875, 1e-9);
+});
+
+test("cardioidPoint applies translation", () => {
+  const p = cardioidPoint(0, { cx: 10, cy: 20, scale: 1, rot: 0 });
+  approx(p.x, 10.875);
+  approx(p.y, 20);
 });
 
 test("nearestCardioidParam finds ~0 distance for a point on the curve", () => {
