@@ -25,7 +25,7 @@ export function mountArena(opts) {
   const stadium = { cx: W / 2, cy: H / 2, r: W / 2 - 16 };
 
   let player, opponent, phase, raf, charging, power, wasColliding, bursts;
-  let bannerTimer, calloutTimer;
+  let bannerTimer, calloutTimer, shakeTimer;
   let match, burstMeter, specialReady;
 
   // ---- streak persistence (tolerates unavailable/corrupt storage) ----
@@ -323,7 +323,8 @@ export function mountArena(opts) {
     overlayEl.classList.remove("shake-sm", "shake-md", "shake-lg");
     void overlayEl.offsetWidth; // restart animation
     overlayEl.classList.add(cls);
-    setTimeout(() => overlayEl.classList.remove(cls), 600);
+    clearTimeout(shakeTimer);
+    shakeTimer = setTimeout(() => overlayEl.classList.remove(cls), 600);
   }
 
   // ---- open/close ----
@@ -340,6 +341,7 @@ export function mountArena(opts) {
     cancelAnimationFrame(raf);
     clearTimeout(bannerTimer);
     clearTimeout(calloutTimer);
+    clearTimeout(shakeTimer);
     overlayEl.hidden = true;
     document.body.classList.remove("battling");
     if (onExit) onExit();
