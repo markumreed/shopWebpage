@@ -38,7 +38,9 @@ export function mountBuilder(opts) {
   }
 
   function renderPreview() {
+    previewEl.onerror = null;
     previewEl.style.visibility = "visible";
+    previewEl.src = "";
     previewEl.src = build.blade.image;
     previewEl.alt = build.blade.name;
     previewEl.onerror = () => { previewEl.style.visibility = "hidden"; };
