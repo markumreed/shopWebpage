@@ -3,6 +3,8 @@
 import { stepBey, resolveCollision, decideOutcome, distance, aiSteer, stepRail, tryCatchRail, cardioidPoint, CARDIOID_MAX_R } from "./physics.js";
 import { newMatch, recordRound, WIN_TARGET } from "./match.js";
 import * as sfx from "./sound.js";
+import { combineStats, statsToPhysics } from "./build.js";
+import { BLADES, RATCHETS, BITS } from "./parts.js";
 
 const STADIUM_PARAMS = { dt: 1, friction: 0.012, spinDecay: 0.08, centering: 0.0016 };
 const COLLISION = { restitution: 1.05, collisionSpinDrain: 1.5, superDrain: 25, oppositeSpinMult: 2.2, sameSpinMult: 0.7 };
@@ -19,18 +21,20 @@ const RAIL_FIT = 0.72;        // cardioid max radius as a fraction of bowl radiu
 const RAIL_COOLDOWN = 60;     // frames after a release before a bey can re-catch
 const RAIL_CATCH_DIST = 18;   // how close (px) a bey must pass to catch the rail
 const RAIL_ARC_SCALE = 90;    // larger → less theta advanced per unit ride speed
-// Gear system: high gear catches easily, accelerates hard, costs more spin on
-// release; standard needs more speed to catch but is gentler on stamina.
-const GEARS = {
-  high:     { engageSpeed: 3.0, rideAccel: 0.9, rideCap: 14, spinCost: 4,   rideSpinDrain: 0.15, minRideSpeed: 6 },
-  standard: { engageSpeed: 4.5, rideAccel: 0.5, rideCap: 10, spinCost: 1.5, rideSpinDrain: 0.10, minRideSpeed: 5 },
-};
+// Fallback rail gear when a bey has no build profile (real beys derive theirs
+// from the Bit's xDash via statsToPhysics).
+const STANDARD_GEAR = { engageSpeed: 4.5, rideAccel: 0.5, rideCap: 10, spinCost: 1.5, rideSpinDrain: 0.10, minRideSpeed: 5 };
 
-function makeBey(name, x, y, color, dir = 1) {
+function makeBey(name, x, y, color, dir = 1, profile = {}) {
+  const {
+    spin0 = START_SPIN, mass = 1, atkMult = 1, defMult = 1,
+    launchMult = 1, spinDecayMult = 1, centeringMult = 1, gear = STANDARD_GEAR,
+  } = profile;
   return {
-    name, x, y, vx: 0, vy: 0, spin: START_SPIN, radius: 22, mass: 1,
+    name, x, y, vx: 0, vy: 0, spin: spin0, spin0, radius: 22, mass,
     alive: true, color, special: false, dir, dashCd: 0,
     railed: false, railTheta: 0, railDir: 1, railSpeed: 0,
+    atkMult, defMult, spinDecayMult, centeringMult, launchMult, gear,
     rot: 0,        // accumulated visual rotation (radians)
     wobble: 0,     // wobble phase for the low-spin death wobble
   };
@@ -41,7 +45,7 @@ export function mountArena(opts) {
     overlayEl, canvasEl, angleEl, powerFillEl, launchEl, rematchEl, bannerEl, onExit,
     meterYouEl, meterRivalEl, scoreYouEl, scoreRivalEl, streakEl,
     burstFillEl, specialEl, nextRoundEl, calloutEl, muteEl,
-    spinDirEl, gearEl, rivalSetupEl,
+    spinDirEl, rivalSetupEl,
   } = opts;
   const ctx = canvasEl.getContext("2d");
   const W = canvasEl.width, H = canvasEl.height;
@@ -56,7 +60,13 @@ export function mountArena(opts) {
   };
 
   let player, opponent, phase, raf, charging, power, wasColliding, bursts;
-  let playerDir = 1, playerGear = "standard", rivalDir = 1, rivalGear = "standard";
+  let playerDir = 1, rivalDir = 1;
+  let playerBuild = { blade: BLADES[0], ratchet: RATCHETS[0], bit: BITS[0] };
+  let rivalBuild = { blade: BLADES[0], ratchet: RATCHETS[0], bit: BITS[0] };
+
+  const buildProfile = (b) => statsToPhysics(combineStats(b.blade, b.ratchet, b.bit));
+  const randomPick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const randomBuild = () => ({ blade: randomPick(BLADES), ratchet: randomPick(RATCHETS), bit: randomPick(BITS) });
   let bannerTimer, calloutTimer, shakeTimer;
   let match, burstMeter, specialReady, aiBurstMeter;
 
@@ -83,8 +93,8 @@ export function mountArena(opts) {
     streakEl.textContent = "🔥 " + match.streak;
   }
   function updateMeters() {
-    meterYouEl.style.width = (100 * Math.max(0, player.spin) / START_SPIN) + "%";
-    meterRivalEl.style.width = (100 * Math.max(0, opponent.spin) / START_SPIN) + "%";
+    meterYouEl.style.width = (100 * Math.max(0, player.spin) / player.spin0) + "%";
+    meterRivalEl.style.width = (100 * Math.max(0, opponent.spin) / opponent.spin0) + "%";
   }
 
   // ---- pre-match setup controls (spin direction + gear) ----
@@ -92,26 +102,20 @@ export function mountArena(opts) {
 
   function renderRivalSetup() {
     rivalSetupEl.textContent =
-      `RIVAL  ${dirLabel(rivalDir)} · ${rivalGear.toUpperCase()} GEAR`;
+      `RIVAL  ${dirLabel(rivalDir)} · ${rivalBuild.blade.name} / ${rivalBuild.ratchet.name} / ${rivalBuild.bit.name}`;
   }
 
-  // Reflect the player's current spinDir/gear in the toggle button states.
+  // Reflect the player's current spin direction in the toggle button states.
   function syncSetupControls() {
     spinDirEl.querySelectorAll(".seg-btn").forEach((b) => {
       const on = Number(b.dataset.dir) === playerDir;
       b.classList.toggle("is-on", on);
       b.setAttribute("aria-pressed", String(on));
     });
-    gearEl.querySelectorAll(".seg-btn").forEach((b) => {
-      const on = b.dataset.gear === playerGear;
-      b.classList.toggle("is-on", on);
-      b.setAttribute("aria-pressed", String(on));
-    });
   }
 
   function setSetupEnabled(on) {
-    [...spinDirEl.querySelectorAll(".seg-btn"), ...gearEl.querySelectorAll(".seg-btn")]
-      .forEach((b) => { b.disabled = !on; });
+    spinDirEl.querySelectorAll(".seg-btn").forEach((b) => { b.disabled = !on; });
   }
 
   // ---- match / round lifecycle ----
@@ -124,9 +128,9 @@ export function mountArena(opts) {
   function startRound() {
     cancelAnimationFrame(raf);
     rivalDir = Math.random() < 0.5 ? 1 : -1;
-    rivalGear = Math.random() < 0.5 ? "high" : "standard";
-    player = makeBey("You", stadium.cx - 120, stadium.cy, "#2bf2ff", playerDir);
-    opponent = makeBey("Rival", stadium.cx + 120, stadium.cy, "#ff2bd6", rivalDir);
+    rivalBuild = randomBuild();
+    player = makeBey("You", stadium.cx - 120, stadium.cy, "#2bf2ff", playerDir, buildProfile(playerBuild));
+    opponent = makeBey("Rival", stadium.cx + 120, stadium.cy, "#ff2bd6", rivalDir, buildProfile(rivalBuild));
     phase = "ready"; // ready -> spinning -> done
     charging = false;
     power = 0;
@@ -198,20 +202,20 @@ export function mountArena(opts) {
 
   function launchPlayer() {
     const angle = (Number(angleEl.value) * Math.PI) / 180;
-    const speed = 2 + (power / 100) * 9;
+    const speed = (2 + (power / 100) * 9) * player.launchMult;
     player.vx = Math.cos(angle) * speed;
     player.vy = Math.sin(angle) * speed;
-    player.spin = START_SPIN * (0.6 + 0.4 * (power / 100));
+    player.spin = player.spin0 * (0.6 + 0.4 * (power / 100));
     sfx.launch(power / 100);
 
     // AI launches a committed strike toward the player, but its aim now carries
     // a wider spread and its speed is a bit lower, so it whiffs more often and
     // hits softer. It still steers during the round, just less relentlessly.
     const aiAngle = Math.atan2(player.y - opponent.y, player.x - opponent.x) + (Math.random() - 0.5) * 0.6;
-    const aiSpeed = 6 + Math.random() * 3;
+    const aiSpeed = (6 + Math.random() * 3) * opponent.launchMult;
     opponent.vx = Math.cos(aiAngle) * aiSpeed;
     opponent.vy = Math.sin(aiAngle) * aiSpeed;
-    opponent.spin = START_SPIN * AI_SPIN_BONUS;
+    opponent.spin = opponent.spin0;
 
     phase = "spinning";
     setSetupEnabled(false);
@@ -238,7 +242,7 @@ export function mountArena(opts) {
     const ang = Math.atan2(opponent.y - player.y, opponent.x - player.x);
     player.vx += Math.cos(ang) * SPECIAL_DASH;
     player.vy += Math.sin(ang) * SPECIAL_DASH;
-    player.spin = Math.min(START_SPIN, player.spin + 10); // small spin kick
+    player.spin = Math.min(player.spin0, player.spin + 10); // small spin kick
     specialReady = false;
     burstMeter = 0;
     burstFillEl.style.width = "0%";
@@ -260,7 +264,7 @@ export function mountArena(opts) {
     const ang = Math.atan2(player.y - opponent.y, player.x - opponent.x);
     opponent.vx += Math.cos(ang) * SPECIAL_DASH;
     opponent.vy += Math.sin(ang) * SPECIAL_DASH;
-    opponent.spin = Math.min(START_SPIN * AI_SPIN_BONUS, opponent.spin + 10);
+    opponent.spin = Math.min(opponent.spin0, opponent.spin + 10);
     aiBurstMeter = 0;
     sfx.special();
     showCallout("RIVAL SPECIAL!");
@@ -293,8 +297,8 @@ export function mountArena(opts) {
   // Advance one bey for a frame. A railed bey rides the cardioid (and on release
   // slingshots toward the foe); a free bey moves under normal physics, ticks its
   // cooldown, and may catch the rail.
-  function advanceRail(bey, foe, gearKey) {
-    const gear = GEARS[gearKey];
+  function advanceRail(bey, foe) {
+    const gear = bey.gear;
     if (bey.railed) {
       let { bey: next, released } = stepRail(bey, rail, gear);
       if (released) {
@@ -330,8 +334,8 @@ export function mountArena(opts) {
     // uses each foe's start-of-frame position so the two advances stay symmetric.
     const pStart = { x: player.x, y: player.y };
     const oStart = { x: opponent.x, y: opponent.y };
-    player = advanceRail(player, oStart, playerGear);
-    opponent = advanceRail(opponent, pStart, rivalGear);
+    player = advanceRail(player, oStart);
+    opponent = advanceRail(opponent, pStart);
 
     // advance visual rotation + low-spin wobble from current spin speed
     spinVisuals(player);
@@ -668,12 +672,6 @@ export function mountArena(opts) {
     if (player) player.dir = playerDir; // reflect on the idle pre-launch bey
     syncSetupControls();
     draw();
-  });
-  gearEl.addEventListener("click", (e) => {
-    const btn = e.target.closest(".seg-btn");
-    if (!btn || phase !== "ready") return;
-    playerGear = btn.dataset.gear;
-    syncSetupControls();
   });
   syncSetupControls();
 
