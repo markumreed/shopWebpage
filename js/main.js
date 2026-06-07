@@ -174,6 +174,15 @@ function init() {
     launchEl: $("#launch"),
     rematchEl: $("#rematch"),
     bannerEl: $("#arena-banner"),
+    meterYouEl: $("#meter-you"),
+    meterRivalEl: $("#meter-rival"),
+    scoreYouEl: $("#score-you"),
+    scoreRivalEl: $("#score-rival"),
+    streakEl: $("#score-streak"),
+    burstFillEl: $("#burst-fill"),
+    specialEl: $("#special"),
+    nextRoundEl: $("#next-round"),
+    calloutEl: $("#arena-callout"),
     onExit: () => {}
   });
   $("#red-button").addEventListener("click", arena.open);

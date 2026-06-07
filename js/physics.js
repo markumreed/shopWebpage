@@ -32,7 +32,7 @@ export function stepBey(bey, stadium, params) {
 }
 
 export function resolveCollision(a, b, params) {
-  const { restitution, collisionSpinDrain } = params;
+  const { restitution, collisionSpinDrain, superDrain = 0 } = params;
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const dist = Math.hypot(dx, dy);
@@ -74,6 +74,11 @@ export function resolveCollision(a, b, params) {
   // both lose spin on contact
   a2.spin = Math.max(0, a.spin - collisionSpinDrain);
   b2.spin = Math.max(0, b.spin - collisionSpinDrain);
+
+  // special attack: a bey with `special` set drains extra spin from the other,
+  // then its flag clears (one-shot).
+  if (a.special) { b2.spin = Math.max(0, b2.spin - superDrain); a2.special = false; }
+  if (b.special) { a2.spin = Math.max(0, a2.spin - superDrain); b2.special = false; }
 
   return [a2, b2];
 }

@@ -147,9 +147,27 @@
   <div id="arena" class="arena" hidden>
     <div class="arena-hud">
       <div class="arena-title">BEYBLADE <span>ARENA</span></div>
+      <div class="arena-score">
+        <span class="score-side you">YOU <span id="score-you" class="pips"></span></span>
+        <span id="score-streak" class="score-streak">🔥 0</span>
+        <span class="score-side rival"><span id="score-rival" class="pips"></span> RIVAL</span>
+      </div>
       <button id="arena-exit" class="arena-exit">Exit to Shop</button>
     </div>
+
+    <div class="arena-meters">
+      <div class="meter you">
+        <span class="meter-label">YOU</span>
+        <div class="meter-track"><div id="meter-you" class="meter-fill"></div></div>
+      </div>
+      <div class="meter rival">
+        <span class="meter-label">RIVAL</span>
+        <div class="meter-track"><div id="meter-rival" class="meter-fill"></div></div>
+      </div>
+    </div>
+
     <canvas id="arena-canvas" class="arena-canvas" width="720" height="720"></canvas>
+
     <div class="arena-controls">
       <label class="ctrl">Angle
         <input id="angle" type="range" min="0" max="360" value="45" />
@@ -158,9 +176,22 @@
         <div class="power-label">Power</div>
         <div class="power-track"><div id="power-fill" class="power-fill"></div></div>
       </div>
+      <div class="power-wrap">
+        <div class="power-label">Burst</div>
+        <div class="power-track"><div id="burst-fill" class="burst-fill"></div></div>
+      </div>
       <button id="launch" class="btn-launch">HOLD&nbsp;TO&nbsp;CHARGE</button>
+      <button id="special" class="btn-special" disabled>SPECIAL</button>
+      <button id="next-round" class="btn-primary" hidden>Next Round</button>
       <button id="rematch" class="btn-primary" hidden>Rematch</button>
     </div>
+
+    <p id="arena-rules" class="arena-rules">
+      Knock the rival out of the ring (<b>RING&nbsp;OUT</b>) or outspin them
+      (<b>SPIN&nbsp;OUT</b>). First to <b>2</b> round wins takes the match.
+    </p>
+
+    <div id="arena-callout" class="arena-callout" hidden></div>
     <div id="arena-banner" class="arena-banner" hidden></div>
   </div>
 

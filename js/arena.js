@@ -1,23 +1,69 @@
-// arena.js — canvas battle. Pure physics comes from physics.js.
+// arena.js — canvas battle. Pure physics comes from physics.js; round/score
+// state comes from match.js. This file is all DOM/canvas wiring + game feel.
 import { stepBey, resolveCollision, decideOutcome, distance } from "./physics.js";
+import { newMatch, recordRound, WIN_TARGET } from "./match.js";
 
 const STADIUM_PARAMS = { dt: 1, friction: 0.012, spinDecay: 0.08, centering: 0.0016 };
-const COLLISION = { restitution: 1.05, collisionSpinDrain: 1.5 };
+const COLLISION = { restitution: 1.05, collisionSpinDrain: 1.5, superDrain: 25 };
 const START_SPIN = 100;
+const BURST_GAIN = 22;        // burst-meter % gained per clash
+const SPECIAL_DASH = 8;       // velocity impulse added on special activation
+const STREAK_KEY = "arena.streak";
 
 function makeBey(name, x, y, color) {
-  return { name, x, y, vx: 0, vy: 0, spin: START_SPIN, radius: 22, mass: 1, alive: true, color };
+  return { name, x, y, vx: 0, vy: 0, spin: START_SPIN, radius: 22, mass: 1, alive: true, color, special: false };
 }
 
 export function mountArena(opts) {
-  const { overlayEl, canvasEl, angleEl, powerFillEl, launchEl, rematchEl, bannerEl, onExit } = opts;
+  const {
+    overlayEl, canvasEl, angleEl, powerFillEl, launchEl, rematchEl, bannerEl, onExit,
+    meterYouEl, meterRivalEl, scoreYouEl, scoreRivalEl, streakEl,
+    burstFillEl, specialEl, nextRoundEl, calloutEl,
+  } = opts;
   const ctx = canvasEl.getContext("2d");
   const W = canvasEl.width, H = canvasEl.height;
   const stadium = { cx: W / 2, cy: H / 2, r: W / 2 - 16 };
 
-  let player, opponent, phase, raf, charging, power, wasColliding, bursts, bannerTimer;
+  let player, opponent, phase, raf, charging, power, wasColliding, bursts;
+  let bannerTimer, calloutTimer, shakeTimer;
+  let match, burstMeter, specialReady;
 
-  function reset() {
+  // ---- streak persistence (tolerates unavailable/corrupt storage) ----
+  function loadStreak() {
+    try {
+      const v = parseInt(localStorage.getItem(STREAK_KEY), 10);
+      return Number.isFinite(v) && v >= 0 ? v : 0;
+    } catch { return 0; }
+  }
+  function persistStreak(n) {
+    try { localStorage.setItem(STREAK_KEY, String(n)); } catch { /* non-fatal */ }
+  }
+
+  // ---- scoreboard / meters ----
+  function pips(n) {
+    let s = "";
+    for (let i = 0; i < WIN_TARGET; i++) s += i < n ? "●" : "○";
+    return s;
+  }
+  function renderScore() {
+    scoreYouEl.textContent = pips(match.you);
+    scoreRivalEl.textContent = pips(match.rival);
+    streakEl.textContent = "🔥 " + match.streak;
+  }
+  function updateMeters() {
+    meterYouEl.style.width = (100 * Math.max(0, player.spin) / START_SPIN) + "%";
+    meterRivalEl.style.width = (100 * Math.max(0, opponent.spin) / START_SPIN) + "%";
+  }
+
+  // ---- match / round lifecycle ----
+  function startMatch() {
+    match = newMatch(loadStreak());
+    renderScore();
+    startRound();
+  }
+
+  function startRound() {
+    cancelAnimationFrame(raf);
     player = makeBey("You", stadium.cx - 120, stadium.cy, "#2bf2ff");
     opponent = makeBey("Rival", stadium.cx + 120, stadium.cy, "#ff2bd6");
     phase = "ready"; // ready -> spinning -> done
@@ -25,12 +71,20 @@ export function mountArena(opts) {
     power = 0;
     wasColliding = false;
     bursts = [];
+    burstMeter = 0;
+    specialReady = false;
     clearTimeout(bannerTimer);
+    clearTimeout(calloutTimer);
     powerFillEl.style.width = "0%";
+    burstFillEl.style.width = "0%";
     launchEl.disabled = false;
     launchEl.textContent = "HOLD TO CHARGE";
+    specialEl.disabled = true;
+    specialEl.classList.remove("ready");
     rematchEl.hidden = true;
+    nextRoundEl.hidden = true;
     bannerEl.hidden = true;
+    calloutEl.hidden = true;
     draw();
   }
 
@@ -40,6 +94,15 @@ export function mountArena(opts) {
     void bannerEl.offsetWidth; // force reflow so banner-pop replays
     bannerEl.textContent = text;
     bannerEl.hidden = false;
+  }
+
+  function showCallout(text) {
+    calloutEl.hidden = true;
+    void calloutEl.offsetWidth; // replay callout-pop
+    calloutEl.textContent = text;
+    calloutEl.hidden = false;
+    clearTimeout(calloutTimer);
+    calloutTimer = setTimeout(() => { calloutEl.hidden = true; }, 700);
   }
 
   // ---- charge-launch input ----
@@ -86,6 +149,44 @@ export function mountArena(opts) {
     loop();
   }
 
+  // ---- burst special ----
+  function fillBurst(amount) {
+    if (specialReady) return;
+    burstMeter = Math.min(100, burstMeter + amount);
+    burstFillEl.style.width = burstMeter + "%";
+    if (burstMeter >= 100) {
+      specialReady = true;
+      specialEl.disabled = false;
+      specialEl.classList.add("ready");
+    }
+  }
+  function activateSpecial() {
+    if (!specialReady || phase !== "spinning") return;
+    player.special = true; // consumed on next collision in resolveCollision
+    const ang = Math.atan2(opponent.y - player.y, opponent.x - player.x);
+    player.vx += Math.cos(ang) * SPECIAL_DASH;
+    player.vy += Math.sin(ang) * SPECIAL_DASH;
+    player.spin = Math.min(START_SPIN, player.spin + 10); // small spin kick
+    specialReady = false;
+    burstMeter = 0;
+    burstFillEl.style.width = "0%";
+    specialEl.disabled = true;
+    specialEl.classList.remove("ready");
+    showCallout("SPECIAL!");
+  }
+
+  // ---- impact reaction (callout + shake + burst gain) ----
+  function onImpact(impact, x, y) {
+    spawnBurst(x, y, "#ffffff");
+    fillBurst(BURST_GAIN);
+    let tier, text;
+    if (impact >= 16) { tier = "lg"; text = "MEGA HIT!"; }
+    else if (impact >= 9) { tier = "md"; text = "SMASH!"; }
+    else { tier = "sm"; text = "CLASH!"; }
+    showCallout(text);
+    triggerShake(tier);
+  }
+
   // ---- main loop ----
   function loop() {
     const pPrev = player.alive, oPrev = opponent.alive;
@@ -95,7 +196,8 @@ export function mountArena(opts) {
     // impact burst on the frame the beys first make contact
     const touching = distance(player.x, player.y, opponent.x, opponent.y) <= player.radius + opponent.radius;
     if (touching && !wasColliding) {
-      spawnBurst((player.x + opponent.x) / 2, (player.y + opponent.y) / 2, "#ffffff");
+      const impact = Math.hypot(player.vx - opponent.vx, player.vy - opponent.vy);
+      onImpact(impact, (player.x + opponent.x) / 2, (player.y + opponent.y) / 2);
     }
     wasColliding = touching;
 
@@ -105,29 +207,57 @@ export function mountArena(opts) {
 
     const outcome = decideOutcome(player, opponent);
     if (outcome) {
-      // a bey that just died while still spinning was knocked out (ring-out)
+      // ring-out vs spin-out is decided by where the bey ended up: a bey that
+      // died outside the stadium radius was knocked out (ring-out); otherwise
+      // its spin ran down (spin-out).
       const ringout =
-        (pPrev && !player.alive && player.spin > 0) ||
-        (oPrev && !opponent.alive && opponent.spin > 0);
-      return finish(outcome, ringout);
+        (pPrev && !player.alive && distance(player.x, player.y, stadium.cx, stadium.cy) > stadium.r) ||
+        (oPrev && !opponent.alive && distance(opponent.x, opponent.y, stadium.cx, stadium.cy) > stadium.r);
+      return finishRound(outcome, ringout ? "ringout" : "spinout");
     }
     raf = requestAnimationFrame(loop);
   }
 
-  function finish(outcome, ringout) {
+  function finishRound(outcome, reason) {
     phase = "done";
     cancelAnimationFrame(raf);
-    const result = outcome === "player" ? "YOU WIN!" : outcome === "opponent" ? "DEFEAT" : "DRAW";
-    triggerShake();
-    if (ringout) {
-      spawnBurst(stadium.cx, stadium.cy, "#ff2bd6");
-      draw();
-      showBanner("BURST!");
-      bannerTimer = setTimeout(() => { showBanner(result); rematchEl.hidden = false; }, 800);
-    } else {
-      showBanner(result);
-      rematchEl.hidden = false;
+    launchEl.disabled = true;
+    specialEl.disabled = true;
+    specialEl.classList.remove("ready");
+
+    match = recordRound(match, outcome);
+    updateMeters();
+    renderScore();
+
+    if (outcome === "draw") {
+      triggerShake("md");
+      showBanner("DRAW");
+      bannerTimer = setTimeout(() => {
+        showBanner("REPLAY ROUND");
+        nextRoundEl.textContent = "Replay Round";
+        nextRoundEl.hidden = false;
+      }, 800);
+      return;
     }
+
+    triggerShake(reason === "ringout" ? "lg" : "md");
+    if (reason === "ringout") { spawnBurst(stadium.cx, stadium.cy, "#ff2bd6"); draw(); }
+    showBanner(reason === "ringout" ? "RING OUT!" : "SPIN OUT!");
+
+    bannerTimer = setTimeout(() => {
+      if (match.matchOver) {
+        const won = match.matchWinner === "player";
+        persistStreak(match.streak);
+        renderScore();
+        showBanner(won ? "MATCH WON!" : "MATCH LOST");
+        rematchEl.textContent = "New Match";
+        rematchEl.hidden = false;
+      } else {
+        showBanner(outcome === "player" ? "ROUND WON" : "ROUND LOST");
+        nextRoundEl.textContent = "Next Round";
+        nextRoundEl.hidden = false;
+      }
+    }, 800);
   }
 
   // ---- impact bursts (transient expanding rings) ----
@@ -141,6 +271,7 @@ export function mountArena(opts) {
 
   // ---- rendering ----
   function draw() {
+    updateMeters();
     ctx.clearRect(0, 0, W, H);
     // stadium ring
     ctx.strokeStyle = "rgba(43,242,255,.5)";
@@ -189,9 +320,13 @@ export function mountArena(opts) {
     ctx.restore();
   }
 
-  function triggerShake() {
-    overlayEl.classList.add("shake");
-    setTimeout(() => overlayEl.classList.remove("shake"), 460);
+  function triggerShake(tier = "md") {
+    const cls = "shake-" + tier;
+    overlayEl.classList.remove("shake-sm", "shake-md", "shake-lg");
+    void overlayEl.offsetWidth; // restart animation
+    overlayEl.classList.add(cls);
+    clearTimeout(shakeTimer);
+    shakeTimer = setTimeout(() => overlayEl.classList.remove(cls), 600);
   }
 
   // ---- open/close ----
@@ -199,14 +334,16 @@ export function mountArena(opts) {
     cancelAnimationFrame(raf); // stop any ghost loop before re-initialising
     overlayEl.hidden = false;
     document.body.classList.add("battling");
-    triggerShake();
-    reset();
+    triggerShake("lg");
+    startMatch();
     showBanner("BATTLE!");
     bannerTimer = setTimeout(() => { if (phase === "ready") bannerEl.hidden = true; }, 900);
   }
   function close() {
     cancelAnimationFrame(raf);
     clearTimeout(bannerTimer);
+    clearTimeout(calloutTimer);
+    clearTimeout(shakeTimer);
     overlayEl.hidden = true;
     document.body.classList.remove("battling");
     if (onExit) onExit();
@@ -219,7 +356,9 @@ export function mountArena(opts) {
   launchEl.addEventListener("touchstart", (e) => { e.preventDefault(); startCharge(); }, { passive: false });
   launchEl.addEventListener("touchend", (e) => { e.preventDefault(); release(); }, { passive: false });
   launchEl.addEventListener("touchcancel", cancelCharge, { passive: true });
-  rematchEl.addEventListener("click", reset);
+  specialEl.addEventListener("click", activateSpecial);
+  nextRoundEl.addEventListener("click", startRound);
+  rematchEl.addEventListener("click", startMatch);
 
   return { open, close };
 }

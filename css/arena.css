@@ -5,14 +5,30 @@ body.battling { overflow: hidden; }
 body.battling #shop,
 body.battling .topbar { filter: brightness(.25) saturate(.4); transition: filter .5s; }
 
-@keyframes screen-shake {
+@keyframes shake-sm {
+  0%,100% { transform: translate(0,0); }
+  33% { transform: translate(-3px, 2px); }
+  66% { transform: translate(3px, -2px); }
+}
+@keyframes shake-md {
   0%,100% { transform: translate(0,0); }
   20% { transform: translate(-8px, 6px); }
   40% { transform: translate(7px, -7px); }
   60% { transform: translate(-6px, -5px); }
   80% { transform: translate(6px, 7px); }
 }
-.shake { animation: screen-shake .45s linear; }
+@keyframes shake-lg {
+  0%,100% { transform: translate(0,0); }
+  15% { transform: translate(-16px, 10px); }
+  30% { transform: translate(14px, -14px); }
+  45% { transform: translate(-13px, -10px); }
+  60% { transform: translate(13px, 12px); }
+  75% { transform: translate(-10px, 8px); }
+  90% { transform: translate(9px, -9px); }
+}
+.shake-sm { animation: shake-sm .28s linear; }
+.shake-md { animation: shake-md .45s linear; }
+.shake-lg { animation: shake-lg .6s linear; }
 
 /* Overlay */
 .arena {
@@ -56,3 +72,53 @@ body.battling .topbar { filter: brightness(.25) saturate(.4); transition: filter
   text-shadow: 0 0 24px #ff2bd6, 0 0 48px #2bf2ff; animation: banner-pop .4s ease-out; }
 .arena-banner[hidden] { display: none; }
 @keyframes banner-pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* Scoreboard in the HUD */
+.arena-score { display: flex; align-items: center; gap: 16px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 1px; font-size: 14px; }
+.score-side.you { color: #2bf2ff; }
+.score-side.rival { color: #ff2bd6; }
+.pips { letter-spacing: 2px; }
+.score-streak { color: #ffd64a; text-shadow: 0 0 12px rgba(255,214,74,.7); }
+
+/* Spin meters above the canvas */
+.arena-meters { display: flex; gap: 18px; width: min(72vmin, 720px); }
+.meter { flex: 1; display: flex; align-items: center; gap: 8px; }
+.meter.rival { flex-direction: row-reverse; }
+.meter-label { font-size: 11px; font-weight: 800; letter-spacing: 1px; }
+.meter.you .meter-label { color: #2bf2ff; }
+.meter.rival .meter-label { color: #ff2bd6; }
+.meter-track { flex: 1; height: 12px; background: #15122b; border: 1px solid rgba(234,247,255,.3); overflow: hidden; }
+.meter-fill { height: 100%; width: 100%; transition: width .08s linear; }
+.meter.you .meter-fill { background: linear-gradient(90deg, #0a6, #2bf2ff); }
+.meter.rival .meter-fill { background: linear-gradient(270deg, #a04, #ff2bd6); }
+
+/* Burst meter reuses the power-track shell with its own fill color */
+.burst-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #ffd64a, #ff7a1a); transition: width .1s linear; }
+
+/* SPECIAL button */
+.btn-special { background: #1a1140; color: #ffd64a; border: 1.5px solid #ffd64a;
+  padding: 14px 22px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+  cursor: pointer; }
+.btn-special:disabled { opacity: .4; cursor: default; }
+.btn-special.ready { animation: special-pulse 1s ease-in-out infinite;
+  box-shadow: 0 0 22px rgba(255,214,74,.8); }
+@keyframes special-pulse {
+  0%,100% { transform: scale(1); box-shadow: 0 0 16px rgba(255,214,74,.6); }
+  50% { transform: scale(1.06); box-shadow: 0 0 30px rgba(255,214,74,1); }
+}
+
+/* Rules blurb */
+.arena-rules { max-width: 540px; text-align: center; font-size: 13px; line-height: 1.5;
+  color: rgba(234,247,255,.8); margin: 0; }
+.arena-rules b { color: #ffd64a; }
+
+/* Impact callout — brief floating text */
+.arena-callout { position: absolute; top: 32%; left: 0; right: 0; text-align: center;
+  pointer-events: none; font-family: var(--display, sans-serif); font-style: italic;
+  text-transform: uppercase; font-size: clamp(28px, 6vw, 64px); font-weight: 900;
+  color: #ffd64a; text-shadow: 0 0 18px #ff7a1a, 0 0 36px #ff2bd6;
+  animation: callout-pop .35s ease-out; }
+.arena-callout[hidden] { display: none; }
+@keyframes callout-pop { from { transform: scale(.4) rotate(-4deg); opacity: 0; }
+  to { transform: scale(1) rotate(-4deg); opacity: 1; } }
