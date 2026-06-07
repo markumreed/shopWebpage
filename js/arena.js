@@ -1,5 +1,5 @@
 // arena.js — canvas battle. Pure physics comes from physics.js.
-import { stepBey, resolveCollision, decideOutcome } from "./physics.js";
+import { stepBey, resolveCollision, decideOutcome, distance } from "./physics.js";
 
 const STADIUM_PARAMS = { dt: 1, friction: 0.012, spinDecay: 0.08, centering: 0.0016 };
 const COLLISION = { restitution: 1.05, collisionSpinDrain: 1.5 };
@@ -15,7 +15,7 @@ export function mountArena(opts) {
   const W = canvasEl.width, H = canvasEl.height;
   const stadium = { cx: W / 2, cy: H / 2, r: W / 2 - 16 };
 
-  let player, opponent, phase, raf, charging, power;
+  let player, opponent, phase, raf, charging, power, wasColliding, bursts, bannerTimer;
 
   function reset() {
     player = makeBey("You", stadium.cx - 120, stadium.cy, "#2bf2ff");
@@ -23,12 +23,23 @@ export function mountArena(opts) {
     phase = "ready"; // ready -> spinning -> done
     charging = false;
     power = 0;
+    wasColliding = false;
+    bursts = [];
+    clearTimeout(bannerTimer);
     powerFillEl.style.width = "0%";
     launchEl.disabled = false;
     launchEl.textContent = "HOLD TO CHARGE";
     rematchEl.hidden = true;
     bannerEl.hidden = true;
     draw();
+  }
+
+  // Show banner text, restarting the CSS pop animation each time.
+  function showBanner(text) {
+    bannerEl.hidden = true;
+    void bannerEl.offsetWidth; // force reflow so banner-pop replays
+    bannerEl.textContent = text;
+    bannerEl.hidden = false;
   }
 
   // ---- charge-launch input ----
@@ -50,6 +61,11 @@ export function mountArena(opts) {
     cancelAnimationFrame(raf);
     launchPlayer();
   }
+  function cancelCharge() {
+    if (!charging) return;
+    charging = false;
+    cancelAnimationFrame(raf);
+  }
 
   function launchPlayer() {
     const angle = (Number(angleEl.value) * Math.PI) / 180;
@@ -66,29 +82,61 @@ export function mountArena(opts) {
 
     phase = "spinning";
     launchEl.disabled = true;
+    bannerEl.hidden = true;
     loop();
   }
 
   // ---- main loop ----
   function loop() {
+    const pPrev = player.alive, oPrev = opponent.alive;
     player = stepBey(player, stadium, STADIUM_PARAMS);
     opponent = stepBey(opponent, stadium, STADIUM_PARAMS);
+
+    // impact burst on the frame the beys first make contact
+    const touching = distance(player.x, player.y, opponent.x, opponent.y) <= player.radius + opponent.radius;
+    if (touching && !wasColliding) {
+      spawnBurst((player.x + opponent.x) / 2, (player.y + opponent.y) / 2, "#ffffff");
+    }
+    wasColliding = touching;
+
     [player, opponent] = resolveCollision(player, opponent, COLLISION);
+    stepBursts();
     draw();
 
     const outcome = decideOutcome(player, opponent);
-    if (outcome) return finish(outcome);
+    if (outcome) {
+      // a bey that just died while still spinning was knocked out (ring-out)
+      const ringout =
+        (pPrev && !player.alive && player.spin > 0) ||
+        (oPrev && !opponent.alive && opponent.spin > 0);
+      return finish(outcome, ringout);
+    }
     raf = requestAnimationFrame(loop);
   }
 
-  function finish(outcome) {
+  function finish(outcome, ringout) {
     phase = "done";
     cancelAnimationFrame(raf);
-    const text = outcome === "player" ? "YOU WIN!" : outcome === "opponent" ? "DEFEAT" : "DRAW";
-    bannerEl.textContent = text;
-    bannerEl.hidden = false;
-    rematchEl.hidden = false;
+    const result = outcome === "player" ? "YOU WIN!" : outcome === "opponent" ? "DEFEAT" : "DRAW";
     triggerShake();
+    if (ringout) {
+      spawnBurst(stadium.cx, stadium.cy, "#ff2bd6");
+      draw();
+      showBanner("BURST!");
+      bannerTimer = setTimeout(() => { showBanner(result); rematchEl.hidden = false; }, 800);
+    } else {
+      showBanner(result);
+      rematchEl.hidden = false;
+    }
+  }
+
+  // ---- impact bursts (transient expanding rings) ----
+  function spawnBurst(x, y, color) {
+    bursts.push({ x, y, r: 6, life: 1, color });
+  }
+  function stepBursts() {
+    bursts.forEach((p) => { p.r += 6; p.life -= 0.08; });
+    bursts = bursts.filter((p) => p.life > 0);
   }
 
   // ---- rendering ----
@@ -102,6 +150,22 @@ export function mountArena(opts) {
     ctx.stroke();
     drawBey(player);
     drawBey(opponent);
+    drawBursts();
+  }
+
+  function drawBursts() {
+    bursts.forEach((p) => {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 3;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 16;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    });
   }
 
   function drawBey(b) {
@@ -132,13 +196,17 @@ export function mountArena(opts) {
 
   // ---- open/close ----
   function open() {
+    cancelAnimationFrame(raf); // stop any ghost loop before re-initialising
     overlayEl.hidden = false;
     document.body.classList.add("battling");
     triggerShake();
     reset();
+    showBanner("BATTLE!");
+    bannerTimer = setTimeout(() => { if (phase === "ready") bannerEl.hidden = true; }, 900);
   }
   function close() {
     cancelAnimationFrame(raf);
+    clearTimeout(bannerTimer);
     overlayEl.hidden = true;
     document.body.classList.remove("battling");
     if (onExit) onExit();
@@ -150,6 +218,7 @@ export function mountArena(opts) {
   launchEl.addEventListener("mouseleave", release);
   launchEl.addEventListener("touchstart", (e) => { e.preventDefault(); startCharge(); }, { passive: false });
   launchEl.addEventListener("touchend", (e) => { e.preventDefault(); release(); }, { passive: false });
+  launchEl.addEventListener("touchcancel", cancelCharge, { passive: true });
   rematchEl.addEventListener("click", reset);
 
   return { open, close };

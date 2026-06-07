@@ -1,7 +1,7 @@
 // main.js — page wiring
 import { MENU } from "./data.js";
 import {
-  addItem, removeItem, setQty, cartCount, cartSubtotal, saveCart, loadCart
+  addItem, setQty, cartCount, cartSubtotal, saveCart, loadCart
 } from "./cart.js";
 import { mountArena } from "./arena.js";
 
