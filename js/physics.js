@@ -177,6 +177,61 @@ export function nearestCardioidParam(x, y, geom, samples = 180) {
   return { theta: bestTheta, dist: best };
 }
 
+// tryCatchRail — a free bey "catches" the cardioid rail when it passes close
+// enough while moving fast enough. On catch it locks onto the curve at the
+// nearest theta, riding in its spin direction. Pure — returns { bey, caught }.
+// `geom` = { cx, cy, scale, rot, cooldown, catchDist, arcScale }.
+// `gear` = { engageSpeed, rideAccel, rideCap, spinCost, rideSpinDrain, minRideSpeed }.
+export function tryCatchRail(bey, geom, gear) {
+  if (!bey.alive || bey.railed || (bey.dashCd ?? 0) > 0) return { bey, caught: false };
+
+  const { theta, dist } = nearestCardioidParam(bey.x, bey.y, geom);
+  if (dist > geom.catchDist) return { bey, caught: false };
+
+  const speed = Math.hypot(bey.vx, bey.vy);
+  if (speed < gear.engageSpeed) return { bey, caught: false };
+
+  const next = {
+    ...bey,
+    railed: true,
+    railTheta: theta,
+    railDir: bey.dir ?? 1,
+    railSpeed: Math.max(speed, gear.minRideSpeed),
+  };
+  return { bey: next, caught: true };
+}
+
+// stepRail — advance a railed bey one frame: accelerate, move along the curve,
+// and release off the cusp (theta = 0 / 2π) in the ride direction. On release
+// the bey leaves the rail with a cooldown and a spin cost; the caller aims its
+// velocity. Pure — returns { bey, released }. Assumes bey.railed is true.
+export function stepRail(bey, geom, gear) {
+  const railSpeed = Math.min(gear.rideCap, (bey.railSpeed ?? 0) + gear.rideAccel);
+  const dir = bey.railDir ?? 1;
+  let nextTheta = (bey.railTheta ?? 0) + dir * (railSpeed / geom.arcScale);
+
+  let released = false;
+  if (dir > 0 && nextTheta >= Math.PI * 2) { released = true; nextTheta = 0; }
+  else if (dir < 0 && nextTheta <= 0) { released = true; nextTheta = 0; }
+
+  const p = cardioidPoint(nextTheta, geom);
+  const t = cardioidTangent(nextTheta, geom);
+  const next = {
+    ...bey,
+    x: p.x, y: p.y,
+    vx: t.x * railSpeed, vy: t.y * railSpeed,
+    railTheta: nextTheta,
+    railSpeed,
+    spin: Math.max(0, bey.spin - gear.rideSpinDrain),
+  };
+  if (released) {
+    next.railed = false;
+    next.dashCd = geom.cooldown;
+    next.spin = Math.max(0, next.spin - gear.spinCost);
+  }
+  return { bey: next, released };
+}
+
 // tryXtremeDash — the X-Celerator rail. When a bey is inside the rail band,
 // moving above the gear's engage speed, and off cooldown, its bit-gear meshes
 // with the rail and it gets an Xtreme Dash: an impulse along its current

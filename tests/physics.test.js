@@ -324,3 +324,99 @@ test("nearestCardioidParam returns a large distance for a far point", () => {
   const { dist } = nearestCardioidParam(100, 100, GEOM_UNIT);
   assert.ok(dist > 1, `dist ${dist} should be large`);
 });
+
+import { tryCatchRail, stepRail } from "../js/physics.js";
+
+const RAIL_GEOM = { cx: 0, cy: 0, scale: 50, rot: 0, cooldown: 60, catchDist: 18, arcScale: 90 };
+const RIDE_GEAR = { engageSpeed: 3, rideAccel: 1, rideCap: 14, spinCost: 4, rideSpinDrain: 0.1, minRideSpeed: 6 };
+
+test("tryCatchRail catches a fast bey sitting on the curve", () => {
+  const on = cardioidPoint(1.0, RAIL_GEOM);
+  const b = bey({ x: on.x, y: on.y, vx: 5, vy: 0, dir: 1, dashCd: 0 });
+  const { bey: next, caught } = tryCatchRail(b, RAIL_GEOM, RIDE_GEAR);
+  assert.equal(caught, true);
+  assert.equal(next.railed, true);
+  assert.equal(next.railDir, 1);
+  assert.equal(next.railSpeed, 6); // speed 5 floored up to minRideSpeed 6
+  assert.ok(Math.abs(next.railTheta - 1.0) < 0.05);
+});
+
+test("tryCatchRail does not catch when too far from the curve", () => {
+  const b = bey({ x: 1000, y: 1000, vx: 5, vy: 0, dashCd: 0 });
+  assert.equal(tryCatchRail(b, RAIL_GEOM, RIDE_GEAR).caught, false);
+});
+
+test("tryCatchRail does not catch below the engage speed", () => {
+  const on = cardioidPoint(1.0, RAIL_GEOM);
+  const b = bey({ x: on.x, y: on.y, vx: 1, vy: 0, dashCd: 0 });
+  assert.equal(tryCatchRail(b, RAIL_GEOM, RIDE_GEAR).caught, false);
+});
+
+test("tryCatchRail does not catch a dead bey", () => {
+  const on = cardioidPoint(1.0, RAIL_GEOM);
+  const b = bey({ x: on.x, y: on.y, vx: 5, vy: 0, alive: false, dashCd: 0 });
+  assert.equal(tryCatchRail(b, RAIL_GEOM, RIDE_GEAR).caught, false);
+});
+
+test("tryCatchRail does not catch a bey already on the rail", () => {
+  const on = cardioidPoint(1.0, RAIL_GEOM);
+  const b = bey({ x: on.x, y: on.y, vx: 5, vy: 0, railed: true, dashCd: 0 });
+  assert.equal(tryCatchRail(b, RAIL_GEOM, RIDE_GEAR).caught, false);
+});
+
+test("tryCatchRail does not catch while on cooldown", () => {
+  const on = cardioidPoint(1.0, RAIL_GEOM);
+  const b = bey({ x: on.x, y: on.y, vx: 5, vy: 0, dashCd: 10 });
+  assert.equal(tryCatchRail(b, RAIL_GEOM, RIDE_GEAR).caught, false);
+});
+
+test("tryCatchRail sets railDir from the bey's spin direction", () => {
+  const on = cardioidPoint(1.0, RAIL_GEOM);
+  const b = bey({ x: on.x, y: on.y, vx: 5, vy: 0, dir: -1, dashCd: 0 });
+  assert.equal(tryCatchRail(b, RAIL_GEOM, RIDE_GEAR).bey.railDir, -1);
+});
+
+test("tryCatchRail does not mutate the input bey", () => {
+  const on = cardioidPoint(1.0, RAIL_GEOM);
+  const b = bey({ x: on.x, y: on.y, vx: 5, vy: 0, dir: 1, dashCd: 0 });
+  tryCatchRail(b, RAIL_GEOM, RIDE_GEAR);
+  assert.equal(b.railed, undefined);
+});
+
+test("stepRail advances theta in railDir and ramps ride speed", () => {
+  const b = bey({ railed: true, railTheta: 1.0, railDir: 1, railSpeed: 6, spin: 100 });
+  const { bey: next, released } = stepRail(b, RAIL_GEOM, RIDE_GEAR);
+  assert.equal(released, false);
+  assert.equal(next.railSpeed, 7);                 // 6 + rideAccel 1
+  assert.ok(next.railTheta > 1.0);                 // advanced forward
+  assert.ok(Math.abs(next.railTheta - (1.0 + 7 / 90)) < 1e-9);
+  const p = cardioidPoint(next.railTheta, RAIL_GEOM);
+  assert.ok(Math.abs(next.x - p.x) < 1e-9 && Math.abs(next.y - p.y) < 1e-9);
+});
+
+test("stepRail clamps ride speed to the gear cap", () => {
+  const b = bey({ railed: true, railTheta: 1.0, railDir: 1, railSpeed: 13.5, spin: 100 });
+  assert.equal(stepRail(b, RAIL_GEOM, RIDE_GEAR).bey.railSpeed, 14);
+});
+
+test("stepRail releases at the cusp (railDir +1) with cooldown and spin cost", () => {
+  const b = bey({ railed: true, railTheta: Math.PI * 2 - 0.01, railDir: 1, railSpeed: 6, spin: 100 });
+  const { bey: next, released } = stepRail(b, RAIL_GEOM, RIDE_GEAR);
+  assert.equal(released, true);
+  assert.equal(next.railed, false);
+  assert.equal(next.dashCd, 60);
+  // spin loses the ride trickle (0.1) then the release cost (4)
+  assert.ok(Math.abs(next.spin - 95.9) < 1e-9);
+});
+
+test("stepRail releases when railDir -1 crosses theta 0", () => {
+  const b = bey({ railed: true, railTheta: 0.01, railDir: -1, railSpeed: 6, spin: 100 });
+  assert.equal(stepRail(b, RAIL_GEOM, RIDE_GEAR).released, true);
+});
+
+test("stepRail does not mutate the input bey", () => {
+  const b = bey({ railed: true, railTheta: 1.0, railDir: 1, railSpeed: 6, spin: 100 });
+  stepRail(b, RAIL_GEOM, RIDE_GEAR);
+  assert.equal(b.railTheta, 1.0);
+  assert.equal(b.railSpeed, 6);
+});
