@@ -686,6 +686,17 @@ export function mountArena(opts) {
   }
 
   // ---- listeners ----
+  // Belt-and-suspenders: unlock audio on the very first user gesture anywhere
+  // (e.g. pressing the red button to open the arena), not only on launch — some
+  // browsers need the warm-up to happen at the earliest possible gesture.
+  const firstGestureUnlock = () => {
+    sfx.unlockAudio();
+    window.removeEventListener("pointerdown", firstGestureUnlock);
+    window.removeEventListener("keydown", firstGestureUnlock);
+  };
+  window.addEventListener("pointerdown", firstGestureUnlock);
+  window.addEventListener("keydown", firstGestureUnlock);
+
   launchEl.addEventListener("mousedown", startCharge);
   launchEl.addEventListener("mouseup", release);
   launchEl.addEventListener("mouseleave", release);

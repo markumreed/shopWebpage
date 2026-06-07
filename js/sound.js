@@ -10,7 +10,12 @@ let master = null;
 let enabled = true;
 
 function ensureCtx() {
-  if (ctx) return ctx;
+  if (ctx) {
+    // best-effort re-resume: a context can fall back to "suspended" (tab
+    // backgrounded, autoplay gate) between sounds — nudge it before each use.
+    if (ctx.state === "suspended") ctx.resume();
+    return ctx;
+  }
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) { enabled = false; return null; }
   ctx = new AC();
@@ -20,10 +25,20 @@ function ensureCtx() {
   return ctx;
 }
 
-// Call from a user gesture so the context is allowed to make sound.
+// Call from a user gesture so the context is allowed to make sound. Robust
+// across browsers: resume the context AND start a one-sample silent source
+// inside the gesture — Safari/iOS keep output muted until a node actually
+// starts within a user gesture, even after resume() resolves.
 export function unlockAudio() {
   const c = ensureCtx();
-  if (c && c.state === "suspended") c.resume();
+  if (!c) return;
+  if (c.state === "suspended") c.resume();
+  try {
+    const s = c.createBufferSource();
+    s.buffer = c.createBuffer(1, 1, c.sampleRate);
+    s.connect(c.destination);
+    s.start(0);
+  } catch { /* non-fatal: some engines disallow the warm-up source */ }
 }
 
 export function setMuted(muted) {
@@ -46,7 +61,9 @@ function blip(type, freq, dur, gain, { glideTo, delay = 0 } = {}) {
   osc.frequency.setValueAtTime(freq, t0);
   if (glideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(1, glideTo), t0 + dur);
   g.gain.setValueAtTime(0.0001, t0);
-  g.gain.exponentialRampToValueAtTime(gain, t0 + 0.008);
+  // exponential ramps must target a non-zero value — a zero gain (e.g. a
+  // zero-intensity clash) would throw and abort the sound.
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0001, gain), t0 + 0.008);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
   osc.connect(g).connect(master);
   osc.start(t0);
