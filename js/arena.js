@@ -1,6 +1,6 @@
 // arena.js — canvas battle. Pure physics comes from physics.js; round/score
 // state comes from match.js. This file is all DOM/canvas wiring + game feel.
-import { stepBey, resolveCollision, decideOutcome, distance, aiSteer, tryXtremeDash } from "./physics.js";
+import { stepBey, resolveCollision, decideOutcome, distance, aiSteer, stepRail, tryCatchRail, cardioidPoint, CARDIOID_MAX_R } from "./physics.js";
 import { newMatch, recordRound, WIN_TARGET } from "./match.js";
 import * as sfx from "./sound.js";
 
@@ -13,19 +13,24 @@ const AI_SPIN_BONUS = 1.0;    // rival no longer launches with a stamina advanta
 const AI_AGGRESSION = 0.7;    // rival steers less relentlessly (difficulty)
 const SPECIAL_DASH = 8;       // velocity impulse added on special activation
 const STREAK_KEY = "arena.streak";
-// X-Celerator rail band (as fractions of the stadium radius) + dash cooldown.
-const RAIL = { innerFrac: 0.62, outerFrac: 0.70, cooldown: 40 };
-// Gear system: high gear dashes hard but burns stamina and engages easily;
-// standard is gentler and needs more speed to engage.
+// X-Celerator cardioid rail: how much of the bowl it fills, plus tuning for
+// catching and riding it.
+const RAIL_FIT = 0.72;        // cardioid max radius as a fraction of bowl radius
+const RAIL_COOLDOWN = 60;     // frames after a release before a bey can re-catch
+const RAIL_CATCH_DIST = 18;   // how close (px) a bey must pass to catch the rail
+const RAIL_ARC_SCALE = 90;    // larger → less theta advanced per unit ride speed
+// Gear system: high gear catches easily, accelerates hard, costs more spin on
+// release; standard needs more speed to catch but is gentler on stamina.
 const GEARS = {
-  high:     { dashImpulse: 7.5, engageSpeed: 3.5, spinCost: 4 },
-  standard: { dashImpulse: 4.0, engageSpeed: 5.0, spinCost: 1.5 },
+  high:     { engageSpeed: 3.0, rideAccel: 0.9, rideCap: 14, spinCost: 4,   rideSpinDrain: 0.15, minRideSpeed: 6 },
+  standard: { engageSpeed: 4.5, rideAccel: 0.5, rideCap: 10, spinCost: 1.5, rideSpinDrain: 0.10, minRideSpeed: 5 },
 };
 
 function makeBey(name, x, y, color, dir = 1) {
   return {
     name, x, y, vx: 0, vy: 0, spin: START_SPIN, radius: 22, mass: 1,
     alive: true, color, special: false, dir, dashCd: 0,
+    railed: false, railTheta: 0, railDir: 1, railSpeed: 0,
     rot: 0,        // accumulated visual rotation (radians)
     wobble: 0,     // wobble phase for the low-spin death wobble
   };
@@ -42,9 +47,12 @@ export function mountArena(opts) {
   const W = canvasEl.width, H = canvasEl.height;
   const stadium = { cx: W / 2, cy: H / 2, r: W / 2 - 16 };
   const rail = {
-    inner: stadium.r * RAIL.innerFrac,
-    outer: stadium.r * RAIL.outerFrac,
-    cooldown: RAIL.cooldown,
+    cx: stadium.cx, cy: stadium.cy,
+    scale: (RAIL_FIT * stadium.r) / CARDIOID_MAX_R,
+    rot: Math.PI / 2,            // cusp points downward
+    cooldown: RAIL_COOLDOWN,
+    catchDist: RAIL_CATCH_DIST,
+    arcScale: RAIL_ARC_SCALE,
   };
 
   let player, opponent, phase, raf, charging, power, wasColliding, bursts;
@@ -282,27 +290,42 @@ export function mountArena(opts) {
     sfx.xtreme();
   }
 
+  // Advance one bey for a frame. A railed bey rides the cardioid (and on release
+  // slingshots toward the foe); a free bey moves under normal physics, ticks its
+  // cooldown, and may catch the rail.
+  function advanceRail(bey, foe, gearKey) {
+    const gear = GEARS[gearKey];
+    if (bey.railed) {
+      const { bey: next, released } = stepRail(bey, rail, gear);
+      if (released) {
+        const ang = Math.atan2(foe.y - next.y, foe.x - next.x);
+        next.vx = Math.cos(ang) * next.railSpeed;
+        next.vy = Math.sin(ang) * next.railSpeed;
+        onXtremeDash(next);
+      }
+      return next;
+    }
+    let next = stepBey(bey, stadium, STADIUM_PARAMS);
+    if (next.dashCd > 0) next = { ...next, dashCd: next.dashCd - 1 };
+    return tryCatchRail(next, rail, gear).bey;
+  }
+
   // ---- main loop ----
   function loop() {
     const pPrev = player.alive, oPrev = opponent.alive;
 
-    // AI agency: steer the rival each frame (seek when ahead, survive when behind)
-    const steer = aiSteer(opponent, player, stadium, AI_AGGRESSION);
-    opponent.vx += steer.ax;
-    opponent.vy += steer.ay;
+    // AI agency: steer the rival each frame — but only while it's free, not
+    // while it's locked onto the rail (the rail dictates its motion).
+    if (!opponent.railed) {
+      const steer = aiSteer(opponent, player, stadium, AI_AGGRESSION);
+      opponent.vx += steer.ax;
+      opponent.vy += steer.ay;
+    }
 
-    player = stepBey(player, stadium, STADIUM_PARAMS);
-    opponent = stepBey(opponent, stadium, STADIUM_PARAMS);
-
-    // X-Celerator rail: tick dash cooldowns, then try to engage the Xtreme Dash
-    if (player.dashCd > 0) player = { ...player, dashCd: player.dashCd - 1 };
-    if (opponent.dashCd > 0) opponent = { ...opponent, dashCd: opponent.dashCd - 1 };
-    const pDash = tryXtremeDash(player, stadium, rail, GEARS[playerGear]);
-    player = pDash.bey;
-    if (pDash.fired) onXtremeDash(player);
-    const oDash = tryXtremeDash(opponent, stadium, rail, GEARS[rivalGear]);
-    opponent = oDash.bey;
-    if (oDash.fired) onXtremeDash(opponent);
+    // X-Celerator cardioid rail: railed beys ride the curve and slingshot off the
+    // cusp at the foe; free beys move under physics and may catch the rail.
+    player = advanceRail(player, opponent, playerGear);
+    opponent = advanceRail(opponent, player, rivalGear);
 
     // advance visual rotation + low-spin wobble from current spin speed
     spinVisuals(player);
@@ -427,17 +450,21 @@ export function mountArena(opts) {
       ctx.stroke();
     }
 
-    // X-Celerator rail — a bright dashed gear-track band on the floor
+    // X-Celerator rail — a glowing cardioid track; beys catch it and slingshot
+    // off the cusp at the foe.
     ctx.save();
-    ctx.strokeStyle = "rgba(255,214,74,.5)";
-    ctx.lineWidth = rail.outer - rail.inner;
-    ctx.setLineDash([14, 10]);
-    ctx.shadowColor = "rgba(255,214,74,.5)";
-    ctx.shadowBlur = 10;
+    ctx.strokeStyle = "rgba(255,214,74,.55)";
+    ctx.lineWidth = 3;
+    ctx.shadowColor = "rgba(255,214,74,.6)";
+    ctx.shadowBlur = 12;
     ctx.beginPath();
-    ctx.arc(stadium.cx, stadium.cy, (rail.inner + rail.outer) / 2, 0, Math.PI * 2);
+    const RAIL_STEPS = 140;
+    for (let i = 0; i <= RAIL_STEPS; i++) {
+      const th = (i / RAIL_STEPS) * Math.PI * 2;
+      const p = cardioidPoint(th, rail);
+      if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    }
     ctx.stroke();
-    ctx.setLineDash([]);
     ctx.restore();
 
     // stadium rim
