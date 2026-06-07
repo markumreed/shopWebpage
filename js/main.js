@@ -185,8 +185,13 @@ function init() {
     calloutEl: $("#arena-callout"),
     muteEl: $("#arena-mute"),
     spinDirEl: $("#spin-dir"),
-    gearEl: $("#gear"),
     rivalSetupEl: $("#rival-setup"),
+    bladeSelEl: $("#sel-blade"),
+    ratchetSelEl: $("#sel-ratchet"),
+    bitSelEl: $("#sel-bit"),
+    buildStatsEl: $("#build-stats"),
+    buildYouEl: $("#build-you"),
+    buildRivalEl: $("#build-rival"),
     onExit: () => {}
   });
   $("#red-button").addEventListener("click", arena.open);
