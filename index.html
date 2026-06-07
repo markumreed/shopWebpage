@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Manrope:wght@400;600;800&family=Press+Start+2P&family=Zen+Kaku+Gothic+New:wght@700;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/theme.css" />
   <link rel="stylesheet" href="css/arena.css" />
+  <link rel="stylesheet" href="css/builder.css" />
 </head>
 <body>
   <!-- Hidden arena trigger: disguised "do not press" button -->
@@ -143,6 +144,29 @@
   </aside>
   <div id="cart-scrim" class="scrim" hidden></div>
 
+  <!-- BUILDER SCREEN (hidden until red button) -->
+  <div id="builder" class="builder" hidden>
+    <div class="builder-panel">
+      <button id="builder-close" class="builder-close" aria-label="Back to shop">✕</button>
+      <h2 class="builder-title">BUILD YOUR <span>BEYBLADE</span></h2>
+      <div class="builder-body">
+        <div class="builder-preview">
+          <img id="builder-blade-img" class="builder-blade-img" alt="" />
+          <p id="builder-name" class="builder-name"></p>
+        </div>
+        <div class="builder-config">
+          <div class="builder-selects">
+            <label class="builder-field">Blade <select id="sel-blade" class="part-select" aria-label="Blade"></select></label>
+            <label class="builder-field">Ratchet <select id="sel-ratchet" class="part-select" aria-label="Ratchet"></select></label>
+            <label class="builder-field">Bit <select id="sel-bit" class="part-select" aria-label="Bit"></select></label>
+          </div>
+          <div id="builder-graph" class="builder-graph"></div>
+        </div>
+      </div>
+      <button id="builder-battle" class="btn-launch builder-battle">⚔&nbsp;TO&nbsp;BATTLE</button>
+    </div>
+  </div>
+
   <!-- ARENA OVERLAY (hidden until red button) -->
   <div id="arena" class="arena" hidden>
     <div class="arena-hud">
@@ -180,15 +204,6 @@
           <button type="button" class="seg-btn is-on" data-dir="1" aria-pressed="true">↻&nbsp;Right</button>
           <button type="button" class="seg-btn" data-dir="-1" aria-pressed="false">↺&nbsp;Left</button>
         </div>
-      </div>
-      <div class="ctrl build-picker">
-        <span class="seg-label">Build</span>
-        <div class="build-selects">
-          <select id="sel-blade" class="part-select" aria-label="Blade"></select>
-          <select id="sel-ratchet" class="part-select" aria-label="Ratchet"></select>
-          <select id="sel-bit" class="part-select" aria-label="Bit"></select>
-        </div>
-        <p id="build-stats" class="build-stats"></p>
       </div>
       <label class="ctrl">Angle
         <input id="angle" type="range" min="0" max="360" value="45" />
