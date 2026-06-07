@@ -214,6 +214,15 @@ test("tryXtremeDash fires inside the rail band when fast enough", () => {
   assert.equal(next.dashCd, 40);         // cooldown set from rail
 });
 
+test("tryXtremeDash impulse follows a diagonal heading on both axes", () => {
+  // moving at 4,3 => speed 5 >= engage 3; impulse 8 split along the unit heading
+  const b = bey({ x: 65, y: 0, vx: 4, vy: 3, spin: 100, dashCd: 0 });
+  const { bey: next, fired } = tryXtremeDash(b, STADIUM, RAIL_T, GEAR_T);
+  assert.equal(fired, true);
+  assert.equal(next.vx, 4 + (4 / 5) * 8); // 10.4
+  assert.equal(next.vy, 3 + (3 / 5) * 8); // 7.8
+});
+
 test("tryXtremeDash does not fire below the engage speed", () => {
   const b = bey({ x: 65, y: 0, vx: 1, vy: 0, dashCd: 0 });
   const { fired } = tryXtremeDash(b, STADIUM, RAIL_T, GEAR_T);
