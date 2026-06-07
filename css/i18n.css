@@ -1,0 +1,14 @@
+/* Bilingual learning text: ruby pinyin over characters + muted English gloss */
+.bi { display: inline-block; }
+.bi-zh { line-height: 1.9; }
+ruby { ruby-position: over; }
+ruby > rt { font-size: .55em; opacity: .75; letter-spacing: 0; font-weight: 600; }
+.en-gloss { display: block; font-size: .62em; opacity: .6; font-weight: 400;
+  text-transform: none; letter-spacing: .3px; margin-top: 2px; }
+/* tap-to-hear affordance */
+[data-speak] { cursor: pointer; }
+[data-speak]:hover .bi-zh { text-shadow: 0 0 10px currentColor; }
+/* the taller content needs room to wrap in buttons, callouts, banners */
+.btn-launch, .btn-special, .btn-primary, .seg-btn, .arena-callout, .arena-banner,
+.arena-rules, .rival-setup, .press-start, .dialogue-text { white-space: normal; }
+.arena-callout, .arena-banner { line-height: 1.05; }
