@@ -184,6 +184,9 @@ function init() {
     nextRoundEl: $("#next-round"),
     calloutEl: $("#arena-callout"),
     muteEl: $("#arena-mute"),
+    spinDirEl: $("#spin-dir"),
+    gearEl: $("#gear"),
+    rivalSetupEl: $("#rival-setup"),
     onExit: () => {}
   });
   $("#red-button").addEventListener("click", arena.open);
