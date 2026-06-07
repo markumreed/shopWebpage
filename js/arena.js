@@ -85,7 +85,6 @@ export function mountArena(opts) {
     nextRoundEl.hidden = true;
     bannerEl.hidden = true;
     calloutEl.hidden = true;
-    updateMeters();
     draw();
   }
 
@@ -270,6 +269,7 @@ export function mountArena(opts) {
 
   // ---- rendering ----
   function draw() {
+    updateMeters();
     ctx.clearRect(0, 0, W, H);
     // stadium ring
     ctx.strokeStyle = "rgba(43,242,255,.5)";
