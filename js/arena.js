@@ -296,11 +296,14 @@ export function mountArena(opts) {
   function advanceRail(bey, foe, gearKey) {
     const gear = GEARS[gearKey];
     if (bey.railed) {
-      const { bey: next, released } = stepRail(bey, rail, gear);
+      let { bey: next, released } = stepRail(bey, rail, gear);
       if (released) {
+        // slingshot off the cusp aimed at the foe (the pure layer doesn't know
+        // the opponent's position, so we set the release velocity here). A bey
+        // that ran its spin out on the rail isn't flagged dead until the next
+        // free-physics frame — a one-frame delay that's invisible in play.
         const ang = Math.atan2(foe.y - next.y, foe.x - next.x);
-        next.vx = Math.cos(ang) * next.railSpeed;
-        next.vy = Math.sin(ang) * next.railSpeed;
+        next = { ...next, vx: Math.cos(ang) * next.railSpeed, vy: Math.sin(ang) * next.railSpeed };
         onXtremeDash(next);
       }
       return next;
@@ -323,9 +326,12 @@ export function mountArena(opts) {
     }
 
     // X-Celerator cardioid rail: railed beys ride the curve and slingshot off the
-    // cusp at the foe; free beys move under physics and may catch the rail.
-    player = advanceRail(player, opponent, playerGear);
-    opponent = advanceRail(opponent, player, rivalGear);
+    // cusp at the foe; free beys move under physics and may catch the rail. Aim
+    // uses each foe's start-of-frame position so the two advances stay symmetric.
+    const pStart = { x: player.x, y: player.y };
+    const oStart = { x: opponent.x, y: opponent.y };
+    player = advanceRail(player, oStart, playerGear);
+    opponent = advanceRail(opponent, pStart, rivalGear);
 
     // advance visual rotation + low-spin wobble from current spin speed
     spinVisuals(player);
