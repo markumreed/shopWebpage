@@ -1,11 +1,11 @@
 // arena.js — canvas battle. Pure physics comes from physics.js; round/score
 // state comes from match.js. This file is all DOM/canvas wiring + game feel.
-import { stepBey, resolveCollision, decideOutcome, distance, aiSteer } from "./physics.js";
+import { stepBey, resolveCollision, decideOutcome, distance, aiSteer, tryXtremeDash } from "./physics.js";
 import { newMatch, recordRound, WIN_TARGET } from "./match.js";
 import * as sfx from "./sound.js";
 
 const STADIUM_PARAMS = { dt: 1, friction: 0.012, spinDecay: 0.08, centering: 0.0016 };
-const COLLISION = { restitution: 1.05, collisionSpinDrain: 1.5, superDrain: 25 };
+const COLLISION = { restitution: 1.05, collisionSpinDrain: 1.5, superDrain: 25, oppositeSpinMult: 2.2, sameSpinMult: 0.7 };
 const START_SPIN = 100;
 const BURST_GAIN = 20;        // player burst-meter % gained per clash
 const AI_BURST_GAIN = 17;     // rival charges its special a touch slower than you
@@ -13,11 +13,19 @@ const AI_SPIN_BONUS = 1.0;    // rival no longer launches with a stamina advanta
 const AI_AGGRESSION = 0.7;    // rival steers less relentlessly (difficulty)
 const SPECIAL_DASH = 8;       // velocity impulse added on special activation
 const STREAK_KEY = "arena.streak";
+// X-Celerator rail band (as fractions of the stadium radius) + dash cooldown.
+const RAIL = { innerFrac: 0.62, outerFrac: 0.70, cooldown: 40 };
+// Gear system: high gear dashes hard but burns stamina and engages easily;
+// standard is gentler and needs more speed to engage.
+const GEARS = {
+  high:     { dashImpulse: 7.5, engageSpeed: 3.5, spinCost: 4 },
+  standard: { dashImpulse: 4.0, engageSpeed: 5.0, spinCost: 1.5 },
+};
 
-function makeBey(name, x, y, color) {
+function makeBey(name, x, y, color, dir = 1) {
   return {
     name, x, y, vx: 0, vy: 0, spin: START_SPIN, radius: 22, mass: 1,
-    alive: true, color, special: false,
+    alive: true, color, special: false, dir, dashCd: 0,
     rot: 0,        // accumulated visual rotation (radians)
     wobble: 0,     // wobble phase for the low-spin death wobble
   };
@@ -28,12 +36,19 @@ export function mountArena(opts) {
     overlayEl, canvasEl, angleEl, powerFillEl, launchEl, rematchEl, bannerEl, onExit,
     meterYouEl, meterRivalEl, scoreYouEl, scoreRivalEl, streakEl,
     burstFillEl, specialEl, nextRoundEl, calloutEl, muteEl,
+    spinDirEl, gearEl, rivalSetupEl,
   } = opts;
   const ctx = canvasEl.getContext("2d");
   const W = canvasEl.width, H = canvasEl.height;
   const stadium = { cx: W / 2, cy: H / 2, r: W / 2 - 16 };
+  const rail = {
+    inner: stadium.r * RAIL.innerFrac,
+    outer: stadium.r * RAIL.outerFrac,
+    cooldown: RAIL.cooldown,
+  };
 
   let player, opponent, phase, raf, charging, power, wasColliding, bursts;
+  let playerDir = 1, playerGear = "standard", rivalDir = 1, rivalGear = "standard";
   let bannerTimer, calloutTimer, shakeTimer;
   let match, burstMeter, specialReady, aiBurstMeter;
 
@@ -64,6 +79,33 @@ export function mountArena(opts) {
     meterRivalEl.style.width = (100 * Math.max(0, opponent.spin) / START_SPIN) + "%";
   }
 
+  // ---- pre-match setup controls (spin direction + gear) ----
+  function dirLabel(dir) { return dir === 1 ? "↻ RIGHT" : "↺ LEFT"; }
+
+  function renderRivalSetup() {
+    rivalSetupEl.textContent =
+      `RIVAL  ${dirLabel(rivalDir)} · ${rivalGear.toUpperCase()} GEAR`;
+  }
+
+  // Reflect the player's current spinDir/gear in the toggle button states.
+  function syncSetupControls() {
+    spinDirEl.querySelectorAll(".seg-btn").forEach((b) => {
+      const on = Number(b.dataset.dir) === playerDir;
+      b.classList.toggle("is-on", on);
+      b.setAttribute("aria-pressed", String(on));
+    });
+    gearEl.querySelectorAll(".seg-btn").forEach((b) => {
+      const on = b.dataset.gear === playerGear;
+      b.classList.toggle("is-on", on);
+      b.setAttribute("aria-pressed", String(on));
+    });
+  }
+
+  function setSetupEnabled(on) {
+    [...spinDirEl.querySelectorAll(".seg-btn"), ...gearEl.querySelectorAll(".seg-btn")]
+      .forEach((b) => { b.disabled = !on; });
+  }
+
   // ---- match / round lifecycle ----
   function startMatch() {
     match = newMatch(loadStreak());
@@ -73,8 +115,10 @@ export function mountArena(opts) {
 
   function startRound() {
     cancelAnimationFrame(raf);
-    player = makeBey("You", stadium.cx - 120, stadium.cy, "#2bf2ff");
-    opponent = makeBey("Rival", stadium.cx + 120, stadium.cy, "#ff2bd6");
+    rivalDir = Math.random() < 0.5 ? 1 : -1;
+    rivalGear = Math.random() < 0.5 ? "high" : "standard";
+    player = makeBey("You", stadium.cx - 120, stadium.cy, "#2bf2ff", playerDir);
+    opponent = makeBey("Rival", stadium.cx + 120, stadium.cy, "#ff2bd6", rivalDir);
     phase = "ready"; // ready -> spinning -> done
     charging = false;
     power = 0;
@@ -95,6 +139,9 @@ export function mountArena(opts) {
     nextRoundEl.hidden = true;
     bannerEl.hidden = true;
     calloutEl.hidden = true;
+    setSetupEnabled(true);
+    syncSetupControls();
+    renderRivalSetup();
     draw();
   }
 
@@ -159,6 +206,7 @@ export function mountArena(opts) {
     opponent.spin = START_SPIN * AI_SPIN_BONUS;
 
     phase = "spinning";
+    setSetupEnabled(false);
     launchEl.disabled = true;
     bannerEl.hidden = true;
     sfx.startSpinHum();
@@ -224,6 +272,16 @@ export function mountArena(opts) {
     triggerShake(tier);
   }
 
+  // Xtreme Dash reaction: trailing afterimage along the heading + callout + sfx.
+  function onXtremeDash(b) {
+    const speed = Math.hypot(b.vx, b.vy) || 1;
+    const ux = b.vx / speed, uy = b.vy / speed;
+    for (let i = 1; i <= 3; i++) spawnBurst(b.x - ux * i * 14, b.y - uy * i * 14, b.color);
+    showCallout("XTREME DASH!");
+    triggerShake("sm");
+    sfx.xtreme();
+  }
+
   // ---- main loop ----
   function loop() {
     const pPrev = player.alive, oPrev = opponent.alive;
@@ -235,6 +293,16 @@ export function mountArena(opts) {
 
     player = stepBey(player, stadium, STADIUM_PARAMS);
     opponent = stepBey(opponent, stadium, STADIUM_PARAMS);
+
+    // X-Celerator rail: tick dash cooldowns, then try to engage the Xtreme Dash
+    if (player.dashCd > 0) player = { ...player, dashCd: player.dashCd - 1 };
+    if (opponent.dashCd > 0) opponent = { ...opponent, dashCd: opponent.dashCd - 1 };
+    const pDash = tryXtremeDash(player, stadium, rail, GEARS[playerGear]);
+    player = pDash.bey;
+    if (pDash.fired) onXtremeDash(player);
+    const oDash = tryXtremeDash(opponent, stadium, rail, GEARS[rivalGear]);
+    opponent = oDash.bey;
+    if (oDash.fired) onXtremeDash(opponent);
 
     // advance visual rotation + low-spin wobble from current spin speed
     spinVisuals(player);
@@ -320,7 +388,7 @@ export function mountArena(opts) {
   function spinVisuals(b) {
     if (!b.alive) return;
     const frac = Math.max(0, b.spin) / START_SPIN;
-    b.rot += 0.25 + frac * 0.9;          // angular speed scales with spin
+    b.rot += (b.dir ?? 1) * (0.25 + frac * 0.9); // direction-aware angular speed
     b.wobble += 0.3;
   }
 
@@ -358,6 +426,19 @@ export function mountArena(opts) {
       ctx.arc(stadium.cx, stadium.cy, stadium.r * (i / 4), 0, Math.PI * 2);
       ctx.stroke();
     }
+
+    // X-Celerator rail — a bright dashed gear-track band on the floor
+    ctx.save();
+    ctx.strokeStyle = "rgba(255,214,74,.5)";
+    ctx.lineWidth = rail.outer - rail.inner;
+    ctx.setLineDash([14, 10]);
+    ctx.shadowColor = "rgba(255,214,74,.5)";
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(stadium.cx, stadium.cy, (rail.inner + rail.outer) / 2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    ctx.setLineDash([]);
 
     // stadium rim
     ctx.strokeStyle = "rgba(43,242,255,.5)";
@@ -545,6 +626,23 @@ export function mountArena(opts) {
   }
   nextRoundEl.addEventListener("click", startRound);
   rematchEl.addEventListener("click", startMatch);
+
+  // pre-match toggles — only editable while a round hasn't launched
+  spinDirEl.addEventListener("click", (e) => {
+    const btn = e.target.closest(".seg-btn");
+    if (!btn || phase !== "ready") return;
+    playerDir = Number(btn.dataset.dir);
+    if (player) player.dir = playerDir; // reflect on the idle pre-launch bey
+    syncSetupControls();
+    draw();
+  });
+  gearEl.addEventListener("click", (e) => {
+    const btn = e.target.closest(".seg-btn");
+    if (!btn || phase !== "ready") return;
+    playerGear = btn.dataset.gear;
+    syncSetupControls();
+  });
+  syncSetupControls();
 
   return { open, close };
 }
