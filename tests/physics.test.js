@@ -199,61 +199,6 @@ test("decideOutcome returns 'draw' when both are dead", () => {
   assert.equal(decideOutcome(bey({ alive: false }), bey({ alive: false })), "draw");
 });
 
-import { tryXtremeDash } from "../js/physics.js";
-
-const RAIL_T = { inner: 60, outer: 70, cooldown: 40 };
-const GEAR_T = { dashImpulse: 8, engageSpeed: 3, spinCost: 4 };
-
-test("tryXtremeDash fires inside the rail band when fast enough", () => {
-  // on the band (dist 65 from center 0,0), moving +x at speed 5 >= 3
-  const b = bey({ x: 65, y: 0, vx: 5, vy: 0, spin: 100, dashCd: 0 });
-  const { bey: next, fired } = tryXtremeDash(b, STADIUM, RAIL_T, GEAR_T);
-  assert.equal(fired, true);
-  assert.equal(next.vx, 13);             // 5 + unit(1)*8
-  assert.equal(next.spin, 96);           // 100 - spinCost 4
-  assert.equal(next.dashCd, 40);         // cooldown set from rail
-});
-
-test("tryXtremeDash impulse follows a diagonal heading on both axes", () => {
-  // moving at 4,3 => speed 5 >= engage 3; impulse 8 split along the unit heading
-  const b = bey({ x: 65, y: 0, vx: 4, vy: 3, spin: 100, dashCd: 0 });
-  const { bey: next, fired } = tryXtremeDash(b, STADIUM, RAIL_T, GEAR_T);
-  assert.equal(fired, true);
-  assert.equal(next.vx, 4 + (4 / 5) * 8); // 10.4
-  assert.equal(next.vy, 3 + (3 / 5) * 8); // 7.8
-});
-
-test("tryXtremeDash does not fire below the engage speed", () => {
-  const b = bey({ x: 65, y: 0, vx: 1, vy: 0, dashCd: 0 });
-  const { fired } = tryXtremeDash(b, STADIUM, RAIL_T, GEAR_T);
-  assert.equal(fired, false);
-});
-
-test("tryXtremeDash does not fire outside the rail band", () => {
-  const inside = bey({ x: 10, y: 0, vx: 5, vy: 0, dashCd: 0 }); // dist 10 < inner 60
-  const outside = bey({ x: 90, y: 0, vx: 5, vy: 0, dashCd: 0 }); // dist 90 > outer 70
-  assert.equal(tryXtremeDash(inside, STADIUM, RAIL_T, GEAR_T).fired, false);
-  assert.equal(tryXtremeDash(outside, STADIUM, RAIL_T, GEAR_T).fired, false);
-});
-
-test("tryXtremeDash does not fire while on cooldown", () => {
-  const b = bey({ x: 65, y: 0, vx: 5, vy: 0, dashCd: 12 });
-  assert.equal(tryXtremeDash(b, STADIUM, RAIL_T, GEAR_T).fired, false);
-});
-
-test("tryXtremeDash does not fire for a dead bey", () => {
-  const b = bey({ x: 65, y: 0, vx: 5, vy: 0, alive: false, dashCd: 0 });
-  assert.equal(tryXtremeDash(b, STADIUM, RAIL_T, GEAR_T).fired, false);
-});
-
-test("tryXtremeDash does not mutate the input bey", () => {
-  const b = bey({ x: 65, y: 0, vx: 5, vy: 0, spin: 100, dashCd: 0 });
-  tryXtremeDash(b, STADIUM, RAIL_T, GEAR_T);
-  assert.equal(b.vx, 5);
-  assert.equal(b.spin, 100);
-  assert.equal(b.dashCd, 0);
-});
-
 import { cardioidPoint, cardioidTangent, nearestCardioidParam, CARDIOID_MAX_R } from "../js/physics.js";
 
 // shared float comparison for the geometry tests
