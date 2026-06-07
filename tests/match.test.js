@@ -72,3 +72,16 @@ test("recordRound does not mutate the input state", () => {
   assert.equal(start.you, 0);
   assert.equal(start.round, 1);
 });
+
+test("2-1 path: player wins a three-round match", () => {
+  let m = newMatch(0);
+  m = recordRound(m, "player");
+  m = recordRound(m, "opponent");
+  m = recordRound(m, "player");
+  assert.equal(m.you, 2);
+  assert.equal(m.rival, 1);
+  assert.equal(m.round, 3);
+  assert.equal(m.matchOver, true);
+  assert.equal(m.matchWinner, "player");
+  assert.equal(m.streak, 1);
+});
