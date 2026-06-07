@@ -133,3 +133,30 @@ export function decideOutcome(player, opponent) {
   if (!player.alive && opponent.alive) return "opponent";
   return "draw";
 }
+
+// tryXtremeDash — the X-Celerator rail. When a bey is inside the rail band,
+// moving above the gear's engage speed, and off cooldown, its bit-gear meshes
+// with the rail and it gets an Xtreme Dash: an impulse along its current
+// heading. Pure — returns { bey, fired } and never mutates the input.
+// `rail`  = { inner, outer, cooldown } in absolute units from stadium center.
+// `gear`  = { dashImpulse, engageSpeed, spinCost }.
+export function tryXtremeDash(bey, stadium, rail, gear) {
+  if (!bey.alive || (bey.dashCd ?? 0) > 0) return { bey, fired: false };
+
+  const d = distance(bey.x, bey.y, stadium.cx, stadium.cy);
+  if (d < rail.inner || d > rail.outer) return { bey, fired: false };
+
+  const speed = Math.hypot(bey.vx, bey.vy);
+  if (speed < gear.engageSpeed) return { bey, fired: false };
+
+  const ux = bey.vx / speed;
+  const uy = bey.vy / speed;
+  const next = {
+    ...bey,
+    vx: bey.vx + ux * gear.dashImpulse,
+    vy: bey.vy + uy * gear.dashImpulse,
+    spin: Math.max(0, bey.spin - gear.spinCost),
+    dashCd: rail.cooldown,
+  };
+  return { bey: next, fired: true };
+}
