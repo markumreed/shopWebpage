@@ -394,6 +394,14 @@ test("stepRail advances theta in railDir and ramps ride speed", () => {
   assert.ok(Math.abs(next.x - p.x) < 1e-9 && Math.abs(next.y - p.y) < 1e-9);
 });
 
+test("stepRail advances theta in the negative direction for railDir -1", () => {
+  const b = bey({ railed: true, railTheta: 3.0, railDir: -1, railSpeed: 6, spin: 100 });
+  const { bey: next, released } = stepRail(b, RAIL_GEOM, RIDE_GEAR);
+  assert.equal(released, false);
+  assert.ok(next.railTheta < 3.0);
+  assert.ok(Math.abs(next.railTheta - (3.0 - 7 / 90)) < 1e-9);
+});
+
 test("stepRail clamps ride speed to the gear cap", () => {
   const b = bey({ railed: true, railTheta: 1.0, railDir: 1, railSpeed: 13.5, spin: 100 });
   assert.equal(stepRail(b, RAIL_GEOM, RIDE_GEAR).bey.railSpeed, 14);
@@ -411,7 +419,11 @@ test("stepRail releases at the cusp (railDir +1) with cooldown and spin cost", (
 
 test("stepRail releases when railDir -1 crosses theta 0", () => {
   const b = bey({ railed: true, railTheta: 0.01, railDir: -1, railSpeed: 6, spin: 100 });
-  assert.equal(stepRail(b, RAIL_GEOM, RIDE_GEAR).released, true);
+  const { bey: next, released } = stepRail(b, RAIL_GEOM, RIDE_GEAR);
+  assert.equal(released, true);
+  assert.equal(next.railed, false);
+  assert.equal(next.dashCd, 60);
+  assert.ok(Math.abs(next.spin - 95.9) < 1e-9);
 });
 
 test("stepRail does not mutate the input bey", () => {

@@ -183,7 +183,7 @@ export function nearestCardioidParam(x, y, geom, samples = 180) {
 // `geom` = { cx, cy, scale, rot, cooldown, catchDist, arcScale }.
 // `gear` = { engageSpeed, rideAccel, rideCap, spinCost, rideSpinDrain, minRideSpeed }.
 export function tryCatchRail(bey, geom, gear) {
-  if (!bey.alive || bey.railed || (bey.dashCd ?? 0) > 0) return { bey, caught: false };
+  if (!(bey.alive ?? true) || bey.railed || (bey.dashCd ?? 0) > 0) return { bey, caught: false };
 
   const { theta, dist } = nearestCardioidParam(bey.x, bey.y, geom);
   if (dist > geom.catchDist) return { bey, caught: false };
