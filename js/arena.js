@@ -437,8 +437,8 @@ export function mountArena(opts) {
     ctx.beginPath();
     ctx.arc(stadium.cx, stadium.cy, (rail.inner + rail.outer) / 2, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.restore();
     ctx.setLineDash([]);
+    ctx.restore();
 
     // stadium rim
     ctx.strokeStyle = "rgba(43,242,255,.5)";
