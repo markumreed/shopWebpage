@@ -253,3 +253,50 @@ test("tryXtremeDash does not mutate the input bey", () => {
   assert.equal(b.spin, 100);
   assert.equal(b.dashCd, 0);
 });
+
+import { cardioidPoint, cardioidTangent, nearestCardioidParam, CARDIOID_MAX_R } from "../js/physics.js";
+
+// shared float comparison for the geometry tests
+function approx(actual, expected, eps = 1e-9) {
+  assert.ok(Math.abs(actual - expected) <= eps, `expected ${actual} ≈ ${expected}`);
+}
+
+const GEOM_UNIT = { cx: 0, cy: 0, scale: 1, rot: 0 };
+
+test("cardioidPoint puts the cusp (theta=0) at +0.875*scale from center (rot=0)", () => {
+  const p = cardioidPoint(0, GEOM_UNIT);
+  approx(p.x, 0.875);
+  approx(p.y, 0);
+});
+
+test("cardioidPoint puts the far rounded end (theta=PI) opposite the cusp", () => {
+  const p = cardioidPoint(Math.PI, GEOM_UNIT);
+  approx(p.x, -1.125);
+  approx(p.y, 0);
+});
+
+test("cardioidPoint stays within CARDIOID_MAX_R of center", () => {
+  for (let i = 0; i < 360; i++) {
+    const p = cardioidPoint((i / 360) * Math.PI * 2, GEOM_UNIT);
+    assert.ok(Math.hypot(p.x, p.y) <= CARDIOID_MAX_R + 1e-6, `point at i=${i} escaped`);
+  }
+});
+
+test("cardioidTangent returns a unit vector with the expected direction at PI/2", () => {
+  const t = cardioidTangent(Math.PI / 2, GEOM_UNIT);
+  approx(Math.hypot(t.x, t.y), 1, 1e-9);
+  approx(t.x, -Math.SQRT1_2, 1e-9);
+  approx(t.y, Math.SQRT1_2, 1e-9);
+});
+
+test("nearestCardioidParam finds ~0 distance for a point on the curve", () => {
+  const onCurve = cardioidPoint(1.0, GEOM_UNIT);
+  const { theta, dist } = nearestCardioidParam(onCurve.x, onCurve.y, GEOM_UNIT);
+  assert.ok(dist < 0.06, `dist ${dist} should be small`);
+  assert.ok(Math.abs(theta - 1.0) < 0.05, `theta ${theta} should be ~1.0`);
+});
+
+test("nearestCardioidParam returns a large distance for a far point", () => {
+  const { dist } = nearestCardioidParam(100, 100, GEOM_UNIT);
+  assert.ok(dist > 1, `dist ${dist} should be large`);
+});

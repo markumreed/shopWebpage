@@ -134,6 +134,49 @@ export function decideOutcome(player, opponent) {
   return "draw";
 }
 
+// A cardioid r = 1 − cosθ, recentred so its bounding box centers on the origin,
+// then scaled, rotated, and translated to sit in the stadium. The cusp (θ = 0)
+// is the release point. geom = { cx, cy, scale, rot }.
+const CARDIOID_BBOX_CX = -0.875;    // local bbox-center x (precomputed from the curve)
+export const CARDIOID_MAX_R = 1.34; // upper bound on |point − center| in local units (the
+                                    // true max is ~1.337 near θ≈100°); used for fit scaling
+
+export function cardioidPoint(theta, geom) {
+  const r = 1 - Math.cos(theta);
+  const lx = r * Math.cos(theta) - CARDIOID_BBOX_CX; // recentre so the shape is centered
+  const ly = r * Math.sin(theta);
+  const c = Math.cos(geom.rot), s = Math.sin(geom.rot);
+  return {
+    x: geom.cx + (lx * c - ly * s) * geom.scale,
+    y: geom.cy + (lx * s + ly * c) * geom.scale,
+  };
+}
+
+// Unit tangent at theta (analytic derivative of the local parametric form,
+// rotated to match geom.rot). Independent of scale. Degenerate at the cusp.
+export function cardioidTangent(theta, geom) {
+  const lx = Math.sin(theta) * (2 * Math.cos(theta) - 1);
+  const ly = Math.cos(theta) - Math.cos(2 * theta);
+  const c = Math.cos(geom.rot), s = Math.sin(geom.rot);
+  const rx = lx * c - ly * s;
+  const ry = lx * s + ly * c;
+  const mag = Math.hypot(rx, ry);
+  if (mag < 1e-9) return { x: 0, y: 0 }; // cusp: tangent is degenerate
+  return { x: rx / mag, y: ry / mag };
+}
+
+// Closest sampled point on the cardioid to (x, y): returns its theta and distance.
+export function nearestCardioidParam(x, y, geom, samples = 180) {
+  let best = Infinity, bestTheta = 0;
+  for (let i = 0; i < samples; i++) {
+    const theta = (i / samples) * Math.PI * 2;
+    const p = cardioidPoint(theta, geom);
+    const d = Math.hypot(p.x - x, p.y - y);
+    if (d < best) { best = d; bestTheta = theta; }
+  }
+  return { theta: bestTheta, dist: best };
+}
+
 // tryXtremeDash — the X-Celerator rail. When a bey is inside the rail band,
 // moving above the gear's engage speed, and off cooldown, its bit-gear meshes
 // with the rail and it gets an Xtreme Dash: an impulse along its current
