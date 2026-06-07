@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hans">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Spin Sushi</title>
+  <title>旋转寿司</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Manrope:wght@400;600;800&family=Press+Start+2P&family=Zen+Kaku+Gothic+New:wght@700;900&display=swap" rel="stylesheet" />
@@ -13,19 +13,19 @@
 </head>
 <body>
   <!-- Hidden arena trigger: disguised "do not press" button -->
-  <button id="red-button" class="red-button" aria-label="Do not press">
+  <button id="red-button" class="red-button" aria-label="请勿按下">
     <span class="rb-cap"></span>
-    <span class="rb-label">DO&nbsp;NOT&nbsp;PRESS</span>
+    <span class="rb-label">请勿按下</span>
   </button>
 
   <!-- HUD bar -->
   <header class="topbar">
-    <div class="brand">SPIN<span>SUSHI</span></div>
+    <div class="brand">旋转<span>寿司</span></div>
     <nav class="nav">
-      <a href="#menu">Wares</a>
-      <a href="#about">Story</a>
-      <button id="cart-toggle" class="cart-toggle" aria-label="Open cart">
-        <span class="coin-ico" aria-hidden="true">◎</span> BAG
+      <a href="#menu">菜单</a>
+      <a href="#about">故事</a>
+      <button id="cart-toggle" class="cart-toggle" aria-label="打开购物袋">
+        <span class="coin-ico" aria-hidden="true">◎</span> 购物袋
         <span id="cart-count" class="cart-badge">0</span>
       </button>
     </nav>
@@ -39,9 +39,9 @@
 
       <div class="hero-inner">
         <div class="hero-copy">
-          <p class="hero-kana">回転寿司</p>
-          <h1 class="hero-title">SPIN<br />SUSHI</h1>
-          <p class="hero-tag">A hole-in-the-wall sushi bar. Hand-pressed nigiri. One very forbidden button.</p>
+          <p class="hero-kana">回转寿司</p>
+          <h1 class="hero-title">旋转<br />寿司</h1>
+          <p class="hero-tag">街角的小小寿司店。手捏握寿司，匠心独运。还有一个绝对不能按的按钮。</p>
         </div>
 
         <!-- The old man, out front behind his counter -->
@@ -99,32 +99,32 @@
 
       <!-- JRPG dialogue box -->
       <div class="dialogue" id="dialogue" role="button" tabindex="0" aria-label="Advance dialogue">
-        <span class="dialogue-name">MASTER GINJIRO</span>
+        <span class="dialogue-name">银次郎师傅</span>
         <p class="dialogue-text" id="dialogue-text"></p>
         <span class="dialogue-next" id="dialogue-next" aria-hidden="true">▼</span>
       </div>
 
       <a class="press-start" href="#menu" id="press-start">
-        <span class="ps-blip">▶</span> PRESS&nbsp;START
+        <span class="ps-blip">▶</span> 开始游戏
       </a>
     </section>
 
     <!-- MENU / WARES -->
     <section id="menu" class="menu">
-      <h2 class="section-title">The Wares <span class="kana">品書き</span></h2>
-      <p class="menu-sub">Spend your coins wisely, traveler.</p>
+      <h2 class="section-title">菜单 <span class="kana">品目</span></h2>
+      <p class="menu-sub">旅人啊，把你的金币花得明智些。</p>
       <div id="menu-grid" class="menu-grid"><!-- rendered by main.js --></div>
     </section>
 
     <!-- ABOUT / STORY -->
     <section id="about" class="about">
       <div class="about-panel">
-        <h2 class="section-title">Our Story <span class="kana">物語</span></h2>
-        <p>By day, Spin Sushi serves the sharpest nigiri in the city. The rice is
-          pressed in a single motion. The cuts are clean. Regulars say the counter
-          hums faintly, like something underneath is always spinning.</p>
-        <p>They're not wrong. Beneath the floor sleeps a regulation Beyblade X
-          stadium. Master Ginjiro won't speak of the red button. <em>You shouldn't press it.</em></p>
+        <h2 class="section-title">我们的故事 <span class="kana">传说</span></h2>
+        <p>白天，旋转寿司供应着全城最利落的握寿司。米饭一气呵成地捏成，
+          刀工干净利落。常客们说，柜台总在微微嗡鸣，仿佛底下有什么东西
+          一直在旋转。</p>
+        <p>他们没说错。地板之下，沉睡着一座正规的 Beyblade X 战斗盘。
+          银次郎师傅绝口不提那个红色按钮。<em>你不该按下它。</em></p>
       </div>
     </section>
   </main>
@@ -132,14 +132,14 @@
   <!-- CART DRAWER -->
   <aside id="cart-drawer" class="cart-drawer" aria-hidden="true">
     <div class="cart-head">
-      <h2>Your Bag</h2>
-      <button id="cart-close" class="cart-close" aria-label="Close cart">✕</button>
+      <h2>你的购物袋</h2>
+      <button id="cart-close" class="cart-close" aria-label="关闭购物袋">✕</button>
     </div>
     <ul id="cart-lines" class="cart-lines"><!-- rendered by main.js --></ul>
     <div class="cart-foot">
-      <div class="cart-total">Total <span id="cart-total">0</span></div>
-      <button id="checkout" class="btn-primary btn-block">Checkout</button>
-      <p id="cart-confirm" class="cart-confirm" hidden>Order in! Itadakimasu 🥢</p>
+      <div class="cart-total">合计 <span id="cart-total">0</span></div>
+      <button id="checkout" class="btn-primary btn-block">结账</button>
+      <p id="cart-confirm" class="cart-confirm" hidden>下单成功！开动啦 🥢</p>
     </div>
   </aside>
   <div id="cart-scrim" class="scrim" hidden></div>

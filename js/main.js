@@ -20,7 +20,7 @@ function renderMenu() {
       <p class="mc-desc">${item.desc}</p>
       <div class="mc-foot">
         <span class="mc-price">${item.price}</span>
-        <button class="mc-add" data-id="${item.id}">BUY</button>
+        <button class="mc-add" data-id="${item.id}">购买</button>
       </div>
     </article>
   `).join("");
@@ -42,7 +42,7 @@ function renderCart() {
 
   const lines = $("#cart-lines");
   if (cart.length === 0) {
-    lines.innerHTML = `<li class="cart-empty">Your tray is empty.</li>`;
+    lines.innerHTML = `<li class="cart-empty">你的托盘空空如也。</li>`;
     return;
   }
   lines.innerHTML = cart.map((line) => `
@@ -97,10 +97,10 @@ function checkout() {
 
 // ---- JRPG dialogue (typewriter) ----
 const LINES = [
-  "Welcome, hungry traveler. You've found Spin Sushi.",
-  "The rice is pressed in a single motion. The cuts, clean.",
-  "Choose your dish from my wares below…",
-  "And whatever you do — do NOT press the red button."
+  "欢迎，饥肠辘辘的旅人。你找到了旋转寿司。",
+  "米饭一气呵成地捏好，刀工干净利落。",
+  "从下面的菜单里挑一道菜吧……",
+  "还有，无论如何——千万别按那个红色按钮。"
 ];
 
 function mountDialogue() {
