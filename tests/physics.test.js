@@ -117,6 +117,32 @@ test("resolveCollision: both beys with special drain each other and both flags c
   assert.equal(b2.special, false);
 });
 
+test("resolveCollision: opposite spin directions drain more (spin-steal)", () => {
+  const a = bey({ x: -5, y: 0, spin: 50, dir: 1 });
+  const b = bey({ x: 5, y: 0, spin: 50, dir: -1 });
+  const params = { restitution: 1, collisionSpinDrain: 5, oppositeSpinMult: 2, sameSpinMult: 0.5 };
+  const [a2, b2] = resolveCollision(a, b, params);
+  assert.equal(a2.spin, 40); // 5 * 2 = 10 drained
+  assert.equal(b2.spin, 40);
+});
+
+test("resolveCollision: same spin directions drain less", () => {
+  const a = bey({ x: -5, y: 0, spin: 50, dir: 1 });
+  const b = bey({ x: 5, y: 0, spin: 50, dir: 1 });
+  const params = { restitution: 1, collisionSpinDrain: 5, oppositeSpinMult: 2, sameSpinMult: 0.5 };
+  const [a2, b2] = resolveCollision(a, b, params);
+  assert.equal(a2.spin, 47.5); // 5 * 0.5 = 2.5 drained
+  assert.equal(b2.spin, 47.5);
+});
+
+test("resolveCollision: beys without a dir field default to same-spin (mult 1)", () => {
+  const a = bey({ x: -5, y: 0, spin: 50 });
+  const b = bey({ x: 5, y: 0, spin: 50 });
+  const [a2, b2] = resolveCollision(a, b, { restitution: 1, collisionSpinDrain: 5 });
+  assert.equal(a2.spin, 45); // unchanged legacy behavior
+  assert.equal(b2.spin, 45);
+});
+
 import { aiSteer } from "../js/physics.js";
 
 test("aiSteer returns zero when either bey is dead", () => {

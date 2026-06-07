@@ -32,7 +32,10 @@ export function stepBey(bey, stadium, params) {
 }
 
 export function resolveCollision(a, b, params) {
-  const { restitution, collisionSpinDrain, superDrain = 0 } = params;
+  const {
+    restitution, collisionSpinDrain, superDrain = 0,
+    oppositeSpinMult = 1, sameSpinMult = 1,
+  } = params;
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const dist = Math.hypot(dx, dy);
@@ -71,9 +74,12 @@ export function resolveCollision(a, b, params) {
   b2.x = b.x + nx * (overlap / 2);
   b2.y = b.y + ny * (overlap / 2);
 
-  // both lose spin on contact
-  a2.spin = Math.max(0, a.spin - collisionSpinDrain);
-  b2.spin = Math.max(0, b.spin - collisionSpinDrain);
+  // both lose spin on contact; opposite spin directions "spin-steal" — they
+  // drain harder than same-spin clashes. Beys without a `dir` default to +1.
+  const sameDir = (a.dir ?? 1) === (b.dir ?? 1);
+  const drain = collisionSpinDrain * (sameDir ? sameSpinMult : oppositeSpinMult);
+  a2.spin = Math.max(0, a.spin - drain);
+  b2.spin = Math.max(0, b.spin - drain);
 
   // special attack: a bey with `special` set drains extra spin from the other,
   // then its flag clears (one-shot).
