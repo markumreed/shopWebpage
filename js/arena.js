@@ -5,7 +5,7 @@ import { newMatch, recordRound, WIN_TARGET } from "./match.js";
 import * as sfx from "./sound.js";
 import { combineStats, statsToPhysics } from "./build.js";
 import { BLADES, RATCHETS, BITS } from "./parts.js";
-import { biHtml, biHtmlEntry, t } from "./i18n.js";
+import { biHtml, biHtmlEntry } from "./i18n.js";
 
 const STADIUM_PARAMS = { dt: 1, friction: 0.012, spinDecay: 0.08, centering: 0.0016 };
 const COLLISION = { restitution: 1.05, collisionSpinDrain: 1.5, superDrain: 25, oppositeSpinMult: 2.2, sameSpinMult: 0.7 };
@@ -109,9 +109,9 @@ export function mountArena(opts) {
 
   // ---- pre-match setup controls (spin direction) ----
   function renderRivalSetup() {
-    const dir = rivalDir === 1 ? t("arena.spin.right") : t("arena.spin.left");
+    const dirKey = rivalDir === 1 ? "arena.spin.right" : "arena.spin.left";
     rivalSetupEl.innerHTML =
-      `${biHtml("arena.rival")} · <span class="bi" data-speak="${dir.zh}">${dir.zh}</span> · `
+      `${biHtml("arena.rival")} · ${biHtml(dirKey)} · `
       + `${biHtmlEntry(rivalBuild.blade.name)} / ${biHtmlEntry(rivalBuild.ratchet.name)} / ${biHtmlEntry(rivalBuild.bit.name)}`;
   }
 

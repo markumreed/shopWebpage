@@ -103,6 +103,7 @@ export const STRINGS = {
   "arena.replay": { zh: "重打本回合", py: ["chóng", "dǎ", "běn", "huí", "hé"], en: "Replay Round" },
   "arena.rematch": { zh: "再来一局", py: ["zài", "lái", "yì", "jú"], en: "New Match" },
   "arena.exit":   { zh: "返回车库", py: ["fǎn", "huí", "chē", "kù"], en: "Exit to Garage" },
+  "arena.angle":  { zh: "角度", py: ["jiǎo", "dù"], en: "Angle" },
   "arena.power":  { zh: "力量", py: ["lì", "liàng"], en: "Power" },
   "arena.burst":  { zh: "爆气", py: ["bào", "qì"], en: "Burst" },
   "arena.battle": { zh: "开战！", py: ["kāi", "zhàn"], en: "Battle!" },
