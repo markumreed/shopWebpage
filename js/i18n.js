@@ -181,6 +181,6 @@ export function speak(zh) {
 export function initSpeech(root = document) {
   root.addEventListener("click", (e) => {
     const el = e.target.closest("[data-speak]");
-    if (el) speak(el.dataset.speak);
+    if (el) { speak(el.dataset.speak); el.classList.toggle("show-py"); }
   });
 }
