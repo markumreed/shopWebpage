@@ -14,3 +14,5 @@ ruby > rt { font-size: .55em; opacity: .75; letter-spacing: 0; font-weight: 600;
 .arena-callout, .arena-banner { line-height: 1.05; }
 .fade-in { animation: bi-fade .25s ease-out; }
 @keyframes bi-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+/* phrase-pinyin line (menu items): its own line under the Chinese */
+.bi-py { display: block; font-size: .72em; opacity: .7; font-style: italic; margin-top: 1px; }

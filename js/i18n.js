@@ -40,6 +40,18 @@ export function biHtmlEntry(entry) {
     + `<span class="en-gloss">${escapeHtml(en)}</span></span>`;
 }
 
+// phraseHtml — like biHtmlEntry but the pinyin is shown as one phrase line
+// (not ruby per character). Used for the menu, whose pinyin is phrase-level.
+// entry = { zh, py (phrase string), en }. Tappable for audio via data-speak.
+export function phraseHtml(entry) {
+  if (!entry) return `<span class="bi"></span>`;
+  const { zh = "", py = "", en = "" } = entry;
+  return `<span class="bi" data-speak="${escapeHtml(zh)}">`
+    + `<span class="bi-zh">${escapeHtml(zh)}</span> `
+    + `<span class="bi-py">${escapeHtml(py)}</span> `
+    + `<span class="en-gloss">${escapeHtml(en)}</span></span>`;
+}
+
 // The strings table — front-page strings (zh/py/en structured fields).
 export const STRINGS = {
   // ---- topbar / nav ----
