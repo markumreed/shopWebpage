@@ -47,7 +47,7 @@ function renderMenu() {
 // ---- Cart rendering ----
 function renderCart() {
   $("#cart-count").textContent = cartCount(cart);
-  $("#cart-total").textContent = "◎" + cartSubtotal(cart).toFixed(2);
+  $("#cart-total").textContent = cartSubtotal(cart).toFixed(2);
 
   const lines = $("#cart-lines");
   if (cart.length === 0) {
