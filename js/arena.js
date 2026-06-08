@@ -5,6 +5,7 @@ import { newMatch, recordRound, WIN_TARGET } from "./match.js";
 import * as sfx from "./sound.js";
 import { combineStats, statsToPhysics } from "./build.js";
 import { BLADES, RATCHETS, BITS } from "./parts.js";
+import { biHtml, biHtmlEntry } from "./i18n.js";
 
 const STADIUM_PARAMS = { dt: 1, friction: 0.012, spinDecay: 0.08, centering: 0.0016 };
 const COLLISION = { restitution: 1.05, collisionSpinDrain: 1.5, superDrain: 25, oppositeSpinMult: 2.2, sameSpinMult: 0.7 };
@@ -107,11 +108,11 @@ export function mountArena(opts) {
   }
 
   // ---- pre-match setup controls (spin direction) ----
-  function dirLabel(dir) { return dir === 1 ? "↻ RIGHT" : "↺ LEFT"; }
-
   function renderRivalSetup() {
-    rivalSetupEl.textContent =
-      `RIVAL  ${dirLabel(rivalDir)} · ${rivalBuild.blade.name} / ${rivalBuild.ratchet.name} / ${rivalBuild.bit.name}`;
+    const dirKey = rivalDir === 1 ? "arena.spin.right" : "arena.spin.left";
+    rivalSetupEl.innerHTML =
+      `${biHtml("arena.rival")} · ${biHtml(dirKey)} · `
+      + `${biHtmlEntry(rivalBuild.blade.name)} / ${biHtmlEntry(rivalBuild.ratchet.name)} / ${biHtmlEntry(rivalBuild.bit.name)}`;
   }
 
   // Reflect the player's current spin direction in the toggle button states.
@@ -134,8 +135,8 @@ export function mountArena(opts) {
       const img = document.createElement("img");
       img.className = "build-img";
       img.src = p.image;
-      img.alt = p.name;
-      img.title = p.name;
+      img.alt = p.name.en;
+      img.title = p.name.en;
       img.onerror = () => { img.style.visibility = "hidden"; }; // tolerate missing assets
       container.appendChild(img);
     });
@@ -169,7 +170,7 @@ export function mountArena(opts) {
     powerFillEl.style.width = "0%";
     burstFillEl.style.width = "0%";
     launchEl.disabled = false;
-    launchEl.textContent = "HOLD TO CHARGE";
+    launchEl.innerHTML = biHtml("arena.charge");
     specialEl.disabled = true;
     specialEl.classList.remove("ready");
     rematchEl.hidden = true;
@@ -188,14 +189,14 @@ export function mountArena(opts) {
   function showBanner(text) {
     bannerEl.hidden = true;
     void bannerEl.offsetWidth; // force reflow so banner-pop replays
-    bannerEl.textContent = text;
+    bannerEl.innerHTML = text;
     bannerEl.hidden = false;
   }
 
   function showCallout(text) {
     calloutEl.hidden = true;
     void calloutEl.offsetWidth; // replay callout-pop
-    calloutEl.textContent = text;
+    calloutEl.innerHTML = text;
     calloutEl.hidden = false;
     clearTimeout(calloutTimer);
     calloutTimer = setTimeout(() => { calloutEl.hidden = true; }, 700);
@@ -276,7 +277,7 @@ export function mountArena(opts) {
     specialEl.disabled = true;
     specialEl.classList.remove("ready");
     sfx.special();
-    showCallout("SPECIAL!");
+    showCallout(biHtml("arena.special.go"));
   }
 
   // AI special: charges its own meter on every clash and unleashes a dash the
@@ -294,7 +295,7 @@ export function mountArena(opts) {
     opponent.spin = Math.min(opponent.spin0, opponent.spin + 10);
     aiBurstMeter = 0;
     sfx.special();
-    showCallout("RIVAL SPECIAL!");
+    showCallout(biHtml("arena.rival.special"));
   }
 
   // ---- impact reaction (callout + shake + burst gain) ----
@@ -303,11 +304,11 @@ export function mountArena(opts) {
     fillBurst(BURST_GAIN);
     fillAiBurst(AI_BURST_GAIN);
     sfx.clash(Math.min(1, impact / 18));
-    let tier, text;
-    if (impact >= 16) { tier = "lg"; text = "MEGA HIT!"; }
-    else if (impact >= 9) { tier = "md"; text = "SMASH!"; }
-    else { tier = "sm"; text = "CLASH!"; }
-    showCallout(text);
+    let tier;
+    if (impact >= 16) tier = "lg";
+    else if (impact >= 9) tier = "md";
+    else tier = "sm";
+    showCallout(biHtml(tier === "lg" ? "arena.megahit" : tier === "md" ? "arena.smash" : "arena.clash"));
     triggerShake(tier);
   }
 
@@ -316,7 +317,7 @@ export function mountArena(opts) {
     const speed = Math.hypot(b.vx, b.vy) || 1;
     const ux = b.vx / speed, uy = b.vy / speed;
     for (let i = 1; i <= 3; i++) spawnBurst(b.x - ux * i * 14, b.y - uy * i * 14, b.color);
-    showCallout("XTREME DASH!");
+    showCallout(biHtml("arena.xtreme"));
     triggerShake("sm");
     sfx.xtreme();
   }
@@ -413,10 +414,10 @@ export function mountArena(opts) {
 
     if (outcome === "draw") {
       triggerShake("md");
-      showBanner("DRAW");
+      showBanner(biHtml("arena.draw"));
       bannerTimer = setTimeout(() => {
-        showBanner("REPLAY ROUND");
-        nextRoundEl.textContent = "Replay Round";
+        showBanner(biHtml("arena.replay"));
+        nextRoundEl.innerHTML = biHtml("arena.replay");
         nextRoundEl.hidden = false;
       }, 800);
       return;
@@ -424,7 +425,7 @@ export function mountArena(opts) {
 
     triggerShake(reason === "ringout" ? "lg" : "md");
     if (reason === "ringout") { spawnBurst(stadium.cx, stadium.cy, "#ff2bd6"); draw(); }
-    showBanner(reason === "ringout" ? "RING OUT!" : "SPIN OUT!");
+    showBanner(reason === "ringout" ? biHtml("arena.ringout") : biHtml("arena.spinout"));
 
     bannerTimer = setTimeout(() => {
       if (match.matchOver) {
@@ -432,12 +433,12 @@ export function mountArena(opts) {
         persistStreak(match.streak);
         renderScore();
         if (won) sfx.win(); else sfx.lose();
-        showBanner(won ? "MATCH WON!" : "MATCH LOST");
-        rematchEl.textContent = "New Match";
+        showBanner(won ? biHtml("arena.match.won") : biHtml("arena.match.lost"));
+        rematchEl.innerHTML = biHtml("arena.rematch");
         rematchEl.hidden = false;
       } else {
-        showBanner(outcome === "player" ? "ROUND WON" : "ROUND LOST");
-        nextRoundEl.textContent = "Next Round";
+        showBanner(outcome === "player" ? biHtml("arena.round.won") : biHtml("arena.round.lost"));
+        nextRoundEl.innerHTML = biHtml("arena.next");
         nextRoundEl.hidden = false;
       }
     }, 800);
@@ -672,7 +673,7 @@ export function mountArena(opts) {
     document.body.classList.add("battling");
     triggerShake("lg");
     startMatch();
-    showBanner("BATTLE!");
+    showBanner(biHtml("arena.battle"));
     bannerTimer = setTimeout(() => { if (phase === "ready") bannerEl.hidden = true; }, 900);
   }
   function close() {
