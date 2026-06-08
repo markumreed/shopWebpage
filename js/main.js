@@ -3,7 +3,7 @@ import { MENU } from "./data.js";
 import {
   addItem, setQty, cartCount, cartSubtotal, saveCart, loadCart
 } from "./cart.js";
-import { biHtmlEntry, biHtml, applyI18n, initSpeech } from "./i18n.js";
+import { biHtml, phraseHtml, applyI18n, initSpeech } from "./i18n.js";
 import { mountArena } from "./arena.js";
 import { mountBuilder } from "./builder.js";
 
@@ -14,17 +14,25 @@ const $ = (sel) => document.querySelector(sel);
 // ---- Menu rendering ----
 function renderMenu() {
   const grid = $("#menu-grid");
-  grid.innerHTML = MENU.map((item) => `
+  let lastCat = null;
+  grid.innerHTML = MENU.map((item) => {
+    let head = "";
+    if (item.category.en !== lastCat) {
+      lastCat = item.category.en;
+      head = `<h3 class="menu-cat">${phraseHtml(item.category)}</h3>`;
+    }
+    return head + `
     <article class="menu-card">
-      <span class="mc-kana">${biHtmlEntry(item.kana)}</span>
-      <h3>${biHtmlEntry(item.name)}</h3>
-      <p class="mc-desc">${biHtmlEntry(item.desc)}</p>
+      <img class="mc-img" src="${item.image}" alt="${item.name.en}" loading="lazy"
+           onerror="this.style.display='none'" />
+      <h3>${phraseHtml(item.name)}</h3>
+      <p class="mc-desc">${phraseHtml(item.desc)}</p>
       <div class="mc-foot">
-        <span class="mc-price">${item.price}</span>
+        <span class="mc-price">${item.price.toFixed(2)}</span>
         <button class="mc-add" data-id="${item.id}">${biHtml("menu.buy")}</button>
       </div>
-    </article>
-  `).join("");
+    </article>`;
+  }).join("");
 
   grid.querySelectorAll(".mc-add").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -39,7 +47,7 @@ function renderMenu() {
 // ---- Cart rendering ----
 function renderCart() {
   $("#cart-count").textContent = cartCount(cart);
-  $("#cart-total").textContent = cartSubtotal(cart);
+  $("#cart-total").textContent = "◎" + cartSubtotal(cart).toFixed(2);
 
   const lines = $("#cart-lines");
   if (cart.length === 0) {
@@ -48,13 +56,13 @@ function renderCart() {
   }
   lines.innerHTML = cart.map((line) => `
     <li class="cart-line">
-      <span class="cl-name">${biHtmlEntry(line.name)}</span>
+      <span class="cl-name">${phraseHtml(line.name)}</span>
       <span class="cl-qty">
         <button data-act="dec" data-id="${line.id}">−</button>
         <span>${line.qty}</span>
         <button data-act="inc" data-id="${line.id}">+</button>
       </span>
-      <span class="cl-price">◎${line.price * line.qty}</span>
+      <span class="cl-price">◎${(line.price * line.qty).toFixed(2)}</span>
     </li>
   `).join("");
 
