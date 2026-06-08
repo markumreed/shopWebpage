@@ -23,7 +23,7 @@ function renderMenu() {
     }
     return head + `
     <article class="menu-card">
-      <img class="mc-img" src="${item.image}" alt="${item.name.en}" loading="lazy"
+      <img class="mc-img" src="${item.image}" alt="${item.name.en.replace(/"/g, "&quot;")}" loading="lazy"
            onerror="this.style.display='none'" />
       <h3>${phraseHtml(item.name)}</h3>
       <p class="mc-desc">${phraseHtml(item.desc)}</p>

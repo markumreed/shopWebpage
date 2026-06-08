@@ -247,7 +247,7 @@ body {
 .cart-foot { padding: 18px; border-top: 4px solid var(--ink); }
 .cart-total { display: flex; justify-content: space-between; font-family: var(--display); font-size: 26px; margin-bottom: 14px; }
 .cart-total span { color: var(--red); }
-.cart-total span::before { content: "◎ "; color: #c98a00; }
+#cart-total::before { content: "◎ "; color: #c98a00; }
 .cart-confirm { margin-top: 12px; text-align: center; font-family: var(--game); font-size: 10px; color: var(--red); }
 
 .scrim { position: fixed; inset: 0; background: rgba(23,18,12,.55); z-index: 30; }
