@@ -3,6 +3,7 @@ import { MENU } from "./data.js";
 import {
   addItem, setQty, cartCount, cartSubtotal, saveCart, loadCart
 } from "./cart.js";
+import { biHtmlEntry, biHtml, applyI18n, initSpeech } from "./i18n.js";
 import { mountArena } from "./arena.js";
 import { mountBuilder } from "./builder.js";
 
@@ -15,12 +16,12 @@ function renderMenu() {
   const grid = $("#menu-grid");
   grid.innerHTML = MENU.map((item) => `
     <article class="menu-card">
-      <span class="mc-kana">${item.kana}</span>
-      <h3>${item.name}</h3>
-      <p class="mc-desc">${item.desc}</p>
+      <span class="mc-kana">${biHtmlEntry(item.kana)}</span>
+      <h3>${biHtmlEntry(item.name)}</h3>
+      <p class="mc-desc">${biHtmlEntry(item.desc)}</p>
       <div class="mc-foot">
         <span class="mc-price">${item.price}</span>
-        <button class="mc-add" data-id="${item.id}">购买</button>
+        <button class="mc-add" data-id="${item.id}">${biHtml("menu.buy")}</button>
       </div>
     </article>
   `).join("");
@@ -42,12 +43,12 @@ function renderCart() {
 
   const lines = $("#cart-lines");
   if (cart.length === 0) {
-    lines.innerHTML = `<li class="cart-empty">你的托盘空空如也。</li>`;
+    lines.innerHTML = `<li class="cart-empty">${biHtml("cart.empty")}</li>`;
     return;
   }
   lines.innerHTML = cart.map((line) => `
     <li class="cart-line">
-      <span class="cl-name">${line.name}</span>
+      <span class="cl-name">${biHtmlEntry(line.name)}</span>
       <span class="cl-qty">
         <button data-act="dec" data-id="${line.id}">−</button>
         <span>${line.qty}</span>
@@ -95,13 +96,8 @@ function checkout() {
   setTimeout(() => { confirm.hidden = true; }, 3000);
 }
 
-// ---- JRPG dialogue (typewriter) ----
-const LINES = [
-  "欢迎，饥肠辘辘的旅人。你找到了旋转寿司。",
-  "米饭一气呵成地捏好，刀工干净利落。",
-  "从下面的菜单里挑一道菜吧……",
-  "还有，无论如何——千万别按那个红色按钮。"
-];
+// ---- JRPG dialogue (bilingual) ----
+const LINE_KEYS = ["chef.l1", "chef.l2", "chef.l3", "chef.l4"];
 
 function mountDialogue() {
   const box = $("#dialogue");
@@ -109,52 +105,21 @@ function mountDialogue() {
   const nextEl = $("#dialogue-next");
   if (!box || !textEl) return;
 
-  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let idx = 0;
-  let timer = null;
-  let typing = false;
-
-  function type(line) {
-    clearInterval(timer);
-    nextEl.classList.remove("show");
-    if (reduced) {
-      textEl.textContent = line;
-      nextEl.classList.add("show");
-      typing = false;
-      return;
-    }
-    typing = true;
-    let i = 0;
-    textEl.innerHTML = '<span class="caret">▌</span>';
-    timer = setInterval(() => {
-      i++;
-      textEl.innerHTML = line.slice(0, i) + '<span class="caret">▌</span>';
-      if (i >= line.length) {
-        clearInterval(timer);
-        textEl.textContent = line;
-        nextEl.classList.add("show");
-        typing = false;
-      }
-    }, 38);
+  function show(i) {
+    textEl.innerHTML = biHtml(LINE_KEYS[i]);
+    textEl.classList.remove("fade-in");
+    void textEl.offsetWidth;        // restart the fade animation
+    textEl.classList.add("fade-in");
+    nextEl.classList.add("show");
   }
+  function advance() { idx = (idx + 1) % LINE_KEYS.length; show(idx); }
 
-  function advance() {
-    if (typing) {                 // skip animation, reveal full line
-      clearInterval(timer);
-      textEl.textContent = LINES[idx];
-      nextEl.classList.add("show");
-      typing = false;
-      return;
-    }
-    idx = (idx + 1) % LINES.length;
-    type(LINES[idx]);
-  }
-
+  show(0);
   box.addEventListener("click", advance);
   box.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); advance(); }
   });
-  type(LINES[0]);
 }
 
 // ---- Wire it up ----
@@ -205,6 +170,8 @@ function init() {
   });
   $("#red-button").addEventListener("click", () => builder.open());
   $("#arena-exit").addEventListener("click", arena.close);
+  applyI18n(document);
+  initSpeech(document);
 }
 
 init();

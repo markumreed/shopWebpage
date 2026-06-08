@@ -16,17 +16,17 @@
   <!-- Hidden arena trigger: disguised "do not press" button -->
   <button id="red-button" class="red-button" aria-label="请勿按下">
     <span class="rb-cap"></span>
-    <span class="rb-label">请勿按下</span>
+    <span class="rb-label" data-i18n="do.not.press"></span>
   </button>
 
   <!-- HUD bar -->
   <header class="topbar">
-    <div class="brand">旋转<span>寿司</span></div>
+    <div class="brand" data-i18n="brand"></div>
     <nav class="nav">
-      <a href="#menu">菜单</a>
-      <a href="#about">故事</a>
+      <a href="#menu" data-i18n="nav.menu"></a>
+      <a href="#about" data-i18n="nav.story"></a>
       <button id="cart-toggle" class="cart-toggle" aria-label="打开购物袋">
-        <span class="coin-ico" aria-hidden="true">◎</span> 购物袋
+        <span class="coin-ico" aria-hidden="true">◎</span> <span data-i18n="nav.bag"></span>
         <span id="cart-count" class="cart-badge">0</span>
       </button>
     </nav>
@@ -40,9 +40,9 @@
 
       <div class="hero-inner">
         <div class="hero-copy">
-          <p class="hero-kana">回转寿司</p>
-          <h1 class="hero-title">旋转<br />寿司</h1>
-          <p class="hero-tag">街角的小小寿司店。手捏握寿司，匠心独运。还有一个绝对不能按的按钮。</p>
+          <p class="hero-kana" data-i18n="hero.kana"></p>
+          <h1 class="hero-title" data-i18n="hero.title"></h1>
+          <p class="hero-tag" data-i18n="hero.tag"></p>
         </div>
 
         <!-- The old man, out front behind his counter -->
@@ -100,32 +100,29 @@
 
       <!-- JRPG dialogue box -->
       <div class="dialogue" id="dialogue" role="button" tabindex="0" aria-label="Advance dialogue">
-        <span class="dialogue-name">银次郎师傅</span>
+        <span class="dialogue-name" data-i18n="chef.name"></span>
         <p class="dialogue-text" id="dialogue-text"></p>
         <span class="dialogue-next" id="dialogue-next" aria-hidden="true">▼</span>
       </div>
 
       <a class="press-start" href="#menu" id="press-start">
-        <span class="ps-blip">▶</span> 开始游戏
+        <span class="ps-blip">▶</span> <span data-i18n="press.start"></span>
       </a>
     </section>
 
     <!-- MENU / WARES -->
     <section id="menu" class="menu">
-      <h2 class="section-title">菜单 <span class="kana">品目</span></h2>
-      <p class="menu-sub">旅人啊，把你的金币花得明智些。</p>
+      <h2 class="section-title"><span data-i18n="menu.title"></span> <span class="kana" data-i18n="menu.kana"></span></h2>
+      <p class="menu-sub" data-i18n="menu.sub"></p>
       <div id="menu-grid" class="menu-grid"><!-- rendered by main.js --></div>
     </section>
 
     <!-- ABOUT / STORY -->
     <section id="about" class="about">
       <div class="about-panel">
-        <h2 class="section-title">我们的故事 <span class="kana">传说</span></h2>
-        <p>白天，旋转寿司供应着全城最利落的握寿司。米饭一气呵成地捏成，
-          刀工干净利落。常客们说，柜台总在微微嗡鸣，仿佛底下有什么东西
-          一直在旋转。</p>
-        <p>他们没说错。地板之下，沉睡着一座正规的 Beyblade X 战斗盘。
-          银次郎师傅绝口不提那个红色按钮。<em>你不该按下它。</em></p>
+        <h2 class="section-title"><span data-i18n="story.title"></span> <span class="kana" data-i18n="story.kana"></span></h2>
+        <p data-i18n="story.p1"></p>
+        <p data-i18n="story.p2"></p>
       </div>
     </section>
   </main>
@@ -133,14 +130,14 @@
   <!-- CART DRAWER -->
   <aside id="cart-drawer" class="cart-drawer" aria-hidden="true">
     <div class="cart-head">
-      <h2>你的购物袋</h2>
+      <h2 data-i18n="cart.title"></h2>
       <button id="cart-close" class="cart-close" aria-label="关闭购物袋">✕</button>
     </div>
     <ul id="cart-lines" class="cart-lines"><!-- rendered by main.js --></ul>
     <div class="cart-foot">
-      <div class="cart-total">合计 <span id="cart-total">0</span></div>
-      <button id="checkout" class="btn-primary btn-block">结账</button>
-      <p id="cart-confirm" class="cart-confirm" hidden>下单成功！开动啦 🥢</p>
+      <div class="cart-total"><span data-i18n="cart.total"></span> <span id="cart-total">0</span></div>
+      <button id="checkout" class="btn-primary btn-block" data-i18n="cart.checkout"></button>
+      <p id="cart-confirm" class="cart-confirm" hidden data-i18n="cart.confirm"></p>
     </div>
   </aside>
   <div id="cart-scrim" class="scrim" hidden></div>

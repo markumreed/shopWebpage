@@ -12,3 +12,5 @@ ruby > rt { font-size: .55em; opacity: .75; letter-spacing: 0; font-weight: 600;
 .btn-launch, .btn-special, .btn-primary, .seg-btn, .arena-callout, .arena-banner,
 .arena-rules, .rival-setup, .press-start, .dialogue-text { white-space: normal; }
 .arena-callout, .arena-banner { line-height: 1.05; }
+.fade-in { animation: bi-fade .25s ease-out; }
+@keyframes bi-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
