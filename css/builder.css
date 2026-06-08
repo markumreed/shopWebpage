@@ -23,8 +23,8 @@
   font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
 .builder-field .part-select { flex: 1; }
 .builder-graph { display: flex; flex-direction: column; gap: 6px; }
-.bar-row { display: grid; grid-template-columns: 34px 1fr 32px; align-items: center; gap: 8px; }
-.bar-label { font-size: 11px; letter-spacing: 1px; color: rgba(234,247,255,.85); text-align: right; }
+.bar-row { display: grid; grid-template-columns: 64px 1fr 32px; align-items: center; gap: 8px; }
+.bar-label { font-size: 11px; letter-spacing: 1px; color: rgba(234,247,255,.85); text-align: left; line-height: 1.1; }
 .bar-track { height: 12px; background: #15122b; border: 1px solid rgba(43,242,255,.4); border-radius: 6px; overflow: hidden; }
 .bar-fill { height: 100%; background: linear-gradient(90deg, #2bf2ff, #ff2bd6); transition: width .15s ease; }
 .bar-val { font-size: 11px; color: #eaf7ff; text-align: left; }

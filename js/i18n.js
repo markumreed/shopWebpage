@@ -123,6 +123,18 @@ export const STRINGS = {
     py: ["bǎ","duì","shǒu","zhuàng","chū","chǎng","dì","chū","jiè","huò","hào","jìn","qí","xuán","zhuàn","tíng","zhuàn","xiān","yíng","liǎng","huí","hé","zhě","huò","shèng"],
     en: "Knock the rival out of the ring (RING OUT), or outspin them (SPIN OUT). First to 2 round wins takes the match." },
   "arena.title": { zh: "陀螺竞技场", py: ["tuó", "luó", "jìng", "jì", "chǎng"], en: "Beyblade Arena" },
+  // ---- builder ----
+  "build.title": { zh: "组装你的陀螺", py: ["zǔ", "zhuāng", "nǐ", "de", "tuó", "luó"], en: "Build Your Beyblade" },
+  "build.blade": { zh: "刀环", py: ["dāo", "huán"], en: "Blade" },
+  "build.ratchet": { zh: "棘齿", py: ["jí", "chǐ"], en: "Ratchet" },
+  "build.bit": { zh: "轴尖", py: ["zhóu", "jiān"], en: "Bit" },
+  "build.battle": { zh: "出战", py: ["chū", "zhàn"], en: "To Battle" },
+  "build.close": { zh: "返回商店", py: ["fǎn", "huí", "shāng", "diàn"], en: "Back to Shop" },
+  "stat.atk": { zh: "攻击", py: ["gōng", "jī"], en: "ATK" },
+  "stat.def": { zh: "防御", py: ["fáng", "yù"], en: "DEF" },
+  "stat.sta": { zh: "耐力", py: ["nài", "lì"], en: "STA" },
+  "stat.x":   { zh: "冲刺", py: ["chōng", "cì"], en: "X" },
+  "stat.br":  { zh: "抗爆", py: ["kàng", "bào"], en: "BR" },
 };
 
 export function t(key) { return STRINGS[key]; }

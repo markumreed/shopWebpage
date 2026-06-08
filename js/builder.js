@@ -3,6 +3,9 @@
 // preview of the selected blade. TO BATTLE hands the chosen build to the arena.
 import { BLADES, RATCHETS, BITS } from "./parts.js";
 import { combineStats, buildBars } from "./build.js";
+import { biHtml, biHtmlEntry, t } from "./i18n.js";
+
+const STAT_KEY = { ATK: "stat.atk", DEF: "stat.def", STA: "stat.sta", X: "stat.x", BR: "stat.br" };
 
 export function mountBuilder(opts) {
   const {
@@ -17,7 +20,7 @@ export function mountBuilder(opts) {
     arr.forEach((p, i) => {
       const o = document.createElement("option");
       o.value = String(i);
-      o.textContent = p.name;
+      o.textContent = p.name.zh + " " + p.name.en;
       sel.appendChild(o);
     });
   }
@@ -27,7 +30,7 @@ export function mountBuilder(opts) {
     graphEl.innerHTML = "";
     bars.forEach((bar) => {
       const row = document.createElement("div"); row.className = "bar-row";
-      const label = document.createElement("span"); label.className = "bar-label"; label.textContent = bar.label;
+      const label = document.createElement("span"); label.className = "bar-label"; label.innerHTML = biHtml(STAT_KEY[bar.label]);
       const track = document.createElement("div"); track.className = "bar-track";
       const fill = document.createElement("div"); fill.className = "bar-fill"; fill.style.width = bar.pct + "%";
       const val = document.createElement("span"); val.className = "bar-val"; val.textContent = String(bar.value);
@@ -42,9 +45,9 @@ export function mountBuilder(opts) {
     previewEl.style.visibility = "visible";
     previewEl.src = "";
     previewEl.src = build.blade.image;
-    previewEl.alt = build.blade.name;
+    previewEl.alt = build.blade.name.en;
     previewEl.onerror = () => { previewEl.style.visibility = "hidden"; };
-    nameEl.textContent = `${build.blade.name} / ${build.ratchet.name} / ${build.bit.name}`;
+    nameEl.innerHTML = `${biHtmlEntry(build.blade.name)} / ${biHtmlEntry(build.ratchet.name)} / ${biHtmlEntry(build.bit.name)}`;
   }
 
   function render() { renderGraph(); renderPreview(); }
