@@ -108,8 +108,6 @@ export function mountArena(opts) {
   }
 
   // ---- pre-match setup controls (spin direction) ----
-  function dirLabel(dir) { return dir === 1 ? "↻ RIGHT" : "↺ LEFT"; }
-
   function renderRivalSetup() {
     const dir = rivalDir === 1 ? t("arena.spin.right") : t("arena.spin.left");
     rivalSetupEl.innerHTML =
