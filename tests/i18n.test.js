@@ -43,3 +43,18 @@ test("biHtml looks up a STRINGS key; unknown key returns a visible fallback", ()
   assert.match(biHtml("does.not.exist"), /<span class="bi">does\.not\.exist<\/span>/);
   delete STRINGS.__test;
 });
+
+import { phraseHtml } from "../js/i18n.js";
+
+test("phraseHtml composes zh + phrase pinyin line + gloss with data-speak", () => {
+  const html = phraseHtml({ zh: "西瓜卷", py: "Xīguā Juǎn", en: "Watermelon Roll" });
+  assert.match(html, /<span class="bi" data-speak="西瓜卷">/);
+  assert.match(html, /<span class="bi-zh">西瓜卷<\/span>/);
+  assert.match(html, /<span class="bi-py">Xīguā Juǎn<\/span>/);
+  assert.match(html, /<span class="en-gloss">Watermelon Roll<\/span>/);
+});
+
+test("phraseHtml escapes html-special chars and guards a falsy entry", () => {
+  assert.match(phraseHtml({ zh: "<", py: "a", en: "b" }), /data-speak="&lt;"/);
+  assert.equal(phraseHtml(null), '<span class="bi"></span>');
+});

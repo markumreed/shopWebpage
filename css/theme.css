@@ -198,6 +198,11 @@ body {
 }
 .menu-card .mc-add:hover { background: var(--red); color: #fff; }
 .menu-card .mc-add:active { transform: translate(3px,3px); box-shadow: none; }
+.menu-cat { grid-column: 1 / -1; font-family: var(--display); font-style: italic;
+  text-transform: uppercase; color: var(--red); font-size: 20px; letter-spacing: 1px;
+  margin: 22px 0 2px; padding-bottom: 6px; border-bottom: 3px solid var(--ink-2); }
+.menu-card .mc-img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover;
+  border-radius: 8px; margin-bottom: 10px; background: rgba(0,0,0,.05); }
 
 /* ---------- About panel ---------- */
 .about-panel {
@@ -242,7 +247,7 @@ body {
 .cart-foot { padding: 18px; border-top: 4px solid var(--ink); }
 .cart-total { display: flex; justify-content: space-between; font-family: var(--display); font-size: 26px; margin-bottom: 14px; }
 .cart-total span { color: var(--red); }
-.cart-total span::before { content: "◎ "; color: #c98a00; }
+#cart-total::before { content: "◎ "; color: #c98a00; }
 .cart-confirm { margin-top: 12px; text-align: center; font-family: var(--game); font-size: 10px; color: var(--red); }
 
 .scrim { position: fixed; inset: 0; background: rgba(23,18,12,.55); z-index: 30; }
