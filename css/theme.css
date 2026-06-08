@@ -277,6 +277,11 @@ body {
 @media (max-width: 640px) {
   .nav a { display: none; }
   .dialogue { bottom: 88px; padding: 24px 18px 20px; }
+  .menu-grid { grid-template-columns: 1fr; gap: 14px; }
+  .menu-card { padding: 14px; }
+  .menu-card h3 { font-size: 18px; }
+  .menu-cat { font-size: 17px; margin-top: 16px; }
+  .hero-title { font-size: clamp(40px, 16vw, 72px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .master, .press-start, .dialogue-next, .red-button:hover .rb-cap { animation: none; }

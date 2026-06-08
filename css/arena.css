@@ -152,3 +152,12 @@ body.battling .topbar { filter: brightness(.25) saturate(.4); transition: filter
 .build-img { width: 26px; height: 26px; object-fit: contain;
   background: rgba(255,255,255,.06); border-radius: 4px; }
 .meter.rival .build-imgs { flex-direction: row-reverse; }
+
+/* mobile: keep callouts/banners/controls inside the frame */
+@media (max-width: 640px) {
+  .arena-banner { font-size: clamp(32px, 11vw, 72px); }
+  .arena-callout { font-size: clamp(22px, 7vw, 48px); }
+  .arena-controls { gap: 10px; }
+  .arena-title { font-size: 16px; }
+  .rival-setup { font-size: 11px; }
+}

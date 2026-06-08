@@ -21,3 +21,25 @@ ruby > rt { font-size: .66em; opacity: 0; letter-spacing: 0; font-weight: 600; t
 /* pinyin appears on hover (desktop) or when the term carries .show-py (tap) */
 .bi:hover rt, .bi.show-py rt { opacity: .92; }
 .bi:hover .bi-py, .bi.show-py .bi-py { opacity: .8; max-height: 2.2em; }
+
+/* mobile: keep the two-layer text legible and finger-friendly */
+@media (max-width: 640px) {
+  .en-gloss { font-size: .8em; opacity: .85; }
+  ruby > rt { font-size: .7em; }
+  .bi { line-height: 1.6; }
+}
+/* touch devices have no hover; the dotted cue + tap drives reveal */
+@media (hover: none) {
+  .bi:hover rt { opacity: 0; }            /* don't reveal on phantom hover */
+  .bi:hover .bi-py { opacity: 0; max-height: 0; }
+  .bi.show-py rt { opacity: .92; }
+  .bi.show-py .bi-py { opacity: .8; max-height: 2.2em; }
+}
+
+/* hint shown only on touch devices, auto-fades after a few seconds */
+.pinyin-hint { display: none; margin: 4px 0 0; font-size: 12px; letter-spacing: 1px;
+  color: #2bf2ff; text-align: center; }
+@media (hover: none) {
+  .pinyin-hint { display: block; animation: hint-fade .8s ease 6s forwards; }
+}
+@keyframes hint-fade { to { opacity: 0; visibility: hidden; } }
