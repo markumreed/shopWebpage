@@ -168,7 +168,8 @@ main, .topbar { position: relative; z-index: 1; }
 .hero {
   position: relative; min-height: 94vh; overflow: hidden;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 48px 20px 230px;
+  gap: clamp(22px, 4vh, 46px);
+  padding: 48px 20px 56px;
 }
 /* twinkle layer (repurposed) */
 .hero-speedlines {
@@ -245,8 +246,8 @@ main, .topbar { position: relative; z-index: 1; }
    JRPG dialogue box
    ========================================================= */
 .dialogue {
-  position: absolute; left: 50%; bottom: 104px; transform: translateX(-50%);
-  z-index: 3; width: min(760px, 92vw);
+  position: relative; z-index: 3; width: min(760px, 92vw);
+  margin-top: auto;            /* push the speech + start button to the lower hero */
   background: linear-gradient(180deg, var(--win-1b), var(--win-2));
   border: 3px solid var(--win-edge); border-radius: 12px; color: var(--text);
   box-shadow: 0 0 0 3px var(--win-ring), inset 0 0 0 2px rgba(91,120,230,.4),
@@ -277,8 +278,7 @@ main, .topbar { position: relative; z-index: 1; }
 
 /* PRESS START */
 .press-start {
-  position: absolute; left: 50%; bottom: 38px; transform: translateX(-50%);
-  z-index: 3; font-family: var(--game); font-size: 12px; letter-spacing: 1px;
+  position: relative; z-index: 3; font-family: var(--game); font-size: 12px; letter-spacing: 1px;
   color: var(--gold); background: linear-gradient(180deg, #20307e, #101a52);
   text-decoration: none; padding: 14px 22px;
   border: 2px solid var(--win-edge); border-radius: 8px;
@@ -287,10 +287,10 @@ main, .topbar { position: relative; z-index: 1; }
   animation: ps-pulse 1.1s ease-in-out infinite;
 }
 .press-start:hover { color: #2a0010; background: linear-gradient(180deg, #ffd98a, var(--gold)); }
-.press-start:active { transform: translate(-50%, 3px); }
+.press-start:active { transform: translateY(3px); animation: none; }
 .ps-blip { color: var(--gold); }
 .press-start:hover .ps-blip { color: #2a0010; }
-@keyframes ps-pulse { 0%,100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.04); } }
+@keyframes ps-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
 
 /* =========================================================
    Section headings
