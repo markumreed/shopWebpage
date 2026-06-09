@@ -149,7 +149,7 @@ function awardPoints(n) {
 }
 
 // ---- JRPG dialogue (bilingual) ----
-const LINE_KEYS = ["chef.l1", "chef.l2", "chef.l3", "chef.l4"];
+const LINE_KEYS = ["chef.l1", "chef.l2", "chef.l3", "chef.l4", "chef.l5", "chef.l6"];
 
 function mountDialogue() {
   const box = $("#dialogue");
