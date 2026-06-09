@@ -218,42 +218,28 @@ main, .topbar { position: relative; z-index: 1; }
   font-weight: 600; line-height: 1.6; color: var(--text-dim);
 }
 
-/* the chef on a lit stage */
+/* the shopkeeper, framed as a JRPG character portrait on a lit stage */
 .shopfront { position: relative; display: flex; flex-direction: column; align-items: center; }
 .shopfront::before {
-  content: ""; position: absolute; top: 4%; left: 50%; transform: translateX(-50%);
-  width: 360px; height: 360px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(120,150,255,.35), transparent 65%);
-  filter: blur(4px); z-index: 0;
+  content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 118%; height: 118%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(120,150,255,.4), transparent 66%);
+  filter: blur(6px); z-index: 0;
 }
 .master {
-  position: relative; z-index: 1; width: clamp(210px, 28vw, 290px);
-  filter: drop-shadow(0 10px 0 rgba(0,0,0,.35));
+  position: relative; z-index: 1; width: clamp(260px, 34vw, 380px);
   animation: master-bob 4s ease-in-out infinite;
 }
-.master-svg { width: 100%; height: auto; display: block; }
+.master-img {
+  display: block; width: 100%; height: auto;
+  border: 4px solid var(--win-edge); border-radius: 14px;
+  box-shadow:
+    0 0 0 4px var(--win-ring),
+    inset 0 0 0 2px rgba(91,120,230,.5),
+    0 12px 0 rgba(0,0,0,.45),
+    0 0 26px rgba(120,150,255,.3);
+}
 @keyframes master-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-
-.counter {
-  position: relative; z-index: 1; width: clamp(250px, 32vw, 340px); height: 56px; margin-top: -6px;
-  background: linear-gradient(#5a3b22, #2c1c10);
-  border: 3px solid #0a0704; border-radius: 7px;
-  box-shadow: 0 0 0 3px rgba(255,255,255,.08), 0 10px 0 rgba(0,0,0,.45);
-  display: flex; align-items: center; justify-content: center;
-}
-.neta-case {
-  display: flex; gap: 14px; padding: 5px 16px; transform: translateY(-22px);
-  background: rgba(235,240,255,.92); border: 3px solid #0a0704; border-radius: 6px;
-}
-.nigiri { position: relative; width: 30px; height: 16px; background: #f6efe0;
-  border: 2.5px solid #2a1c10; border-radius: 12px 12px 9px 9px; }
-.nigiri::after {
-  content: ""; position: absolute; left: -2px; right: -2px; top: -7px; height: 11px;
-  border: 2.5px solid #2a1c10; border-radius: 10px;
-}
-.nigiri.n1::after { background: var(--red); }
-.nigiri.n2::after { background: var(--orange); }
-.nigiri.n3::after { background: #2a2118; }
 
 /* =========================================================
    JRPG dialogue box
