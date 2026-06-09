@@ -2,6 +2,7 @@
 // state comes from match.js. This file is all DOM/canvas wiring + game feel.
 import { stepBey, resolveCollision, decideOutcome, distance, aiSteer, stepRail, tryCatchRail, cardioidPoint, CARDIOID_MAX_R } from "./physics.js";
 import { newMatch, recordRound, WIN_TARGET } from "./match.js";
+import { pointsForRound } from "./points.js";
 import * as sfx from "./sound.js";
 import { combineStats, statsToPhysics } from "./build.js";
 import { BLADES, RATCHETS, BITS } from "./parts.js";
@@ -411,6 +412,11 @@ export function mountArena(opts) {
     match = recordRound(match, outcome);
     updateMeters();
     renderScore();
+
+    // Award points: +1 for winning the round, +3 more if it clinched the match.
+    const matchWon = match.matchOver && match.matchWinner === "player";
+    const earned = pointsForRound(outcome === "player", matchWon);
+    if (earned > 0 && typeof opts.awardPoints === "function") opts.awardPoints(earned);
 
     if (outcome === "draw") {
       triggerShake("md");

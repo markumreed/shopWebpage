@@ -25,7 +25,15 @@
     <nav class="nav">
       <a href="#menu" data-i18n="nav.menu"></a>
       <a href="#about" data-i18n="nav.story"></a>
-      <button id="cart-toggle" class="cart-toggle" aria-label="打开购物袋">
+      <span class="points-hud" aria-label="Points">
+        <span class="ph-star" aria-hidden="true">★</span>
+        <span class="ph-label" data-i18n="hud.points"></span>
+        <span id="points-count" class="ph-count">0</span>
+      </span>
+      <button id="battle-btn" class="battle-btn">
+        <span aria-hidden="true">⚔</span> <span data-i18n="hud.battle"></span>
+      </button>
+      <button id="cart-toggle" class="cart-toggle" aria-label="打开订单">
         <span class="coin-ico" aria-hidden="true">◎</span> <span data-i18n="nav.bag"></span>
         <span id="cart-count" class="cart-badge">0</span>
       </button>
@@ -132,7 +140,7 @@
   <aside id="cart-drawer" class="cart-drawer" aria-hidden="true">
     <div class="cart-head">
       <h2 data-i18n="cart.title"></h2>
-      <button id="cart-close" class="cart-close" aria-label="关闭购物袋">✕</button>
+      <button id="cart-close" class="cart-close" aria-label="关闭订单">✕</button>
     </div>
     <ul id="cart-lines" class="cart-lines"><!-- rendered by main.js --></ul>
     <div class="cart-foot">

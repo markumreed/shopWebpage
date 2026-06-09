@@ -190,8 +190,6 @@ body {
 .menu-card h3 { font-family: var(--display); font-style: italic; text-transform: uppercase; font-size: 22px; color: var(--ink); }
 .menu-card .mc-desc { font-size: 13px; opacity: .8; flex: 1; line-height: 1.45; }
 .menu-card .mc-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding-top: 10px; border-top: 2px dashed var(--ink-2); }
-.menu-card .mc-price { font-family: var(--game); font-size: 14px; color: var(--ink); display: inline-flex; align-items: center; gap: 5px; }
-.menu-card .mc-price::before { content: "◎"; color: #c98a00; font-size: 16px; }
 .menu-card .mc-add {
   background: var(--ink); color: var(--paper); border: 0; padding: 9px 14px;
   font-family: var(--game); font-size: 10px; cursor: pointer; box-shadow: 3px 3px 0 var(--red);
@@ -286,3 +284,80 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .master, .press-start, .dialogue-next, .red-button:hover .rb-cap { animation: none; }
 }
+
+/* ===== Arena-points ordering game ===== */
+
+/* Topbar POINTS HUD */
+.points-hud {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--game);
+  font-size: 11px;
+  color: var(--ink);
+  background: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  padding: 7px 10px;
+}
+.points-hud .ph-star { color: #c98a00; font-size: 14px; }
+.points-hud .ph-count { color: var(--red); min-width: 1.2em; text-align: right; }
+
+/* ⚔ Battle button (topbar) */
+.battle-btn {
+  font-family: var(--game);
+  font-size: 11px;
+  color: #fff;
+  background: var(--red);
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  padding: 7px 12px;
+  cursor: pointer;
+}
+.battle-btn:hover { filter: brightness(1.08); }
+.battle-btn:active { transform: translate(3px, 3px); box-shadow: none; }
+
+/* ★ point cost on a menu card (replaces the ◎ price) */
+.menu-card .mc-cost {
+  font-family: var(--game);
+  font-size: 14px;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Locked card — can't afford it yet */
+.menu-card.is-locked {
+  opacity: 0.55;
+  filter: grayscale(0.4);
+}
+.menu-card.is-locked:hover { transform: none; box-shadow: var(--panel-shadow); }
+.menu-card .mc-add[disabled] {
+  cursor: not-allowed;
+  background: var(--paper);
+  color: var(--ink);
+  opacity: 0.9;
+}
+.menu-card .mc-add[disabled]:hover { background: var(--paper); color: var(--ink); }
+
+/* Place Order disabled state */
+#checkout[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+/* Battle CTA inside the empty order tray */
+.tray-battle-wrap { list-style: none; margin-top: 14px; display: flex; justify-content: center; }
+.tray-battle {
+  font-family: var(--game);
+  font-size: 12px;
+  color: #fff;
+  background: var(--red);
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 12px 16px;
+  cursor: pointer;
+}
+.tray-battle:hover { filter: brightness(1.08); }
+.tray-battle:active { transform: translate(4px, 4px); box-shadow: none; }
+
+/* Keep Chinese item names legible — never break mid-word */
+.menu-card h3 .bi-zh { white-space: nowrap; }

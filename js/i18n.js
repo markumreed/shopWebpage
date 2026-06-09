@@ -58,7 +58,10 @@ export const STRINGS = {
   "brand":      { zh: "旋转寿司", py: ["xuán", "zhuàn", "shòu", "sī"], en: "Spin Sushi" },
   "nav.menu":   { zh: "菜单", py: ["cài", "dān"], en: "Menu" },
   "nav.story":  { zh: "故事", py: ["gù", "shi"], en: "Story" },
-  "nav.bag":    { zh: "购物袋", py: ["gòu", "wù", "dài"], en: "Bag" },
+  "nav.bag":    { zh: "订单", py: ["dìng", "dān"], en: "Order" },
+  "hud.points": { zh: "积分", py: ["jī", "fēn"], en: "Points" },
+  "hud.battle": { zh: "去对战", py: ["qù", "duì", "zhàn"], en: "Battle" },
+  "menu.need":  { zh: "还差", py: ["hái", "chà"], en: "need" },
   // ---- hero ----
   "hero.kana":  { zh: "回转寿司", py: ["huí", "zhuàn", "shòu", "sī"], en: "Conveyor-belt sushi" },
   "hero.title": { zh: "旋转寿司", py: ["xuán", "zhuàn", "shòu", "sī"], en: "Spin Sushi" },
@@ -87,7 +90,7 @@ export const STRINGS = {
   "menu.sub":   { zh: "旅人啊，把你的金币花得明智些。",
     py: ["lǚ","rén","a","bǎ","nǐ","de","jīn","bì","huā","de","míng","zhì","xiē"],
     en: "Spend your coins wisely, traveler." },
-  "menu.buy":   { zh: "购买", py: ["gòu", "mǎi"], en: "Buy" },
+  "menu.buy":   { zh: "加入", py: ["jiā", "rù"], en: "Add" },
   // ---- about / story ----
   "story.title":{ zh: "我们的故事", py: ["wǒ", "men", "de", "gù", "shi"], en: "Our Story" },
   "story.kana": { zh: "传说", py: ["chuán", "shuō"], en: "Legend" },
@@ -98,10 +101,10 @@ export const STRINGS = {
     py: ["tā","men","méi","shuō","cuò","dì","bǎn","zhī","xià","chén","shuì","zhe","yí","zuò","zhèng","guī","de","zhàn","dòu","pán","yín","cì","láng","shī","fu","jué","kǒu","bù","tí","nà","gè","hóng","sè","àn","niǔ","nǐ","bù","gāi","àn","xià","tā"],
     en: "They're not wrong. Beneath the floor sleeps a regulation Beyblade X stadium. Master Ginjiro won't speak of the red button. You shouldn't press it." },
   // ---- cart drawer ----
-  "cart.title": { zh: "你的购物袋", py: ["nǐ", "de", "gòu", "wù", "dài"], en: "Your Bag" },
+  "cart.title": { zh: "你的订单", py: ["nǐ", "de", "dìng", "dān"], en: "Your Order" },
   "cart.total": { zh: "合计", py: ["hé", "jì"], en: "Total" },
-  "cart.checkout": { zh: "结账", py: ["jié", "zhàng"], en: "Checkout" },
-  "cart.confirm": { zh: "下单成功！开动啦", py: ["xià","dān","chéng","gōng","kāi","dòng","la"], en: "Order in! Itadakimasu 🥢" },
+  "cart.checkout": { zh: "下单", py: ["xià", "dān"], en: "Place Order" },
+  "cart.confirm": { zh: "已下单！开动啦", py: ["yǐ","xià","dān","kāi","dòng","la"], en: "Order up! Itadakimasu 🥢" },
   "cart.empty": { zh: "你的托盘空空如也。", py: ["nǐ","de","tuō","pán","kōng","kōng","rú","yě"], en: "Your tray is empty." },
   // ---- arena ----
   "arena.you":   { zh: "你", py: ["nǐ"], en: "You" },
