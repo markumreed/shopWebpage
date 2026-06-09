@@ -251,7 +251,7 @@ main, .topbar { position: relative; z-index: 1; }
   border: 3px solid var(--win-edge); border-radius: 12px; color: var(--text);
   box-shadow: 0 0 0 3px var(--win-ring), inset 0 0 0 2px rgba(91,120,230,.4),
     inset 0 3px 0 rgba(255,255,255,.12), 0 12px 0 rgba(0,0,0,.4);
-  padding: 26px 26px 24px; cursor: pointer; user-select: none;
+  padding: 36px 26px 24px; cursor: pointer; user-select: none;
 }
 .dialogue:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
 .dialogue-name {
@@ -260,7 +260,11 @@ main, .topbar { position: relative; z-index: 1; }
   background: linear-gradient(180deg, #ffd98a, var(--gold)); padding: 7px 12px;
   border: 2px solid var(--win-edge); border-radius: 6px;
   box-shadow: 0 0 0 2px var(--win-ring), 0 3px 0 rgba(0,0,0,.4);
+  white-space: nowrap;        /* keep the name on a single line */
 }
+/* nameplate is one compact line: Chinese + English inline, no stacked gloss */
+.dialogue-name .bi-zh { text-decoration: none; }
+.dialogue-name .en-gloss { display: inline; font-size: 1em; opacity: .85; margin: 0; color: #2a0010; }
 .dialogue-text { font-size: clamp(14px, 1.9vw, 18px); line-height: 1.6; min-height: 3.2em; color: var(--text); }
 .dialogue-text .en-gloss { color: var(--text-dim); }
 .dialogue-next {
@@ -510,7 +514,7 @@ main, .topbar { position: relative; z-index: 1; }
   .nav { gap: 10px; }
   .nav a { display: none; }
   .points-hud, .battle-btn, .cart-toggle { font-size: 8px; padding: 7px 9px; }
-  .dialogue { bottom: 92px; padding: 22px 18px 20px; }
+  .dialogue { bottom: 92px; padding: 30px 18px 20px; }
   .menu-grid { grid-template-columns: 1fr; gap: 16px; }
   .section-title { font-size: clamp(18px, 7vw, 26px); }
 }
