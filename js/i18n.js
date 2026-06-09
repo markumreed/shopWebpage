@@ -93,9 +93,9 @@ export const STRINGS = {
   // ---- menu section ----
   "menu.title": { zh: "菜单", py: ["cài", "dān"], en: "The Wares" },
   "menu.kana":  { zh: "品目", py: ["pǐn", "mù"], en: "Bill of fare" },
-  "menu.sub":   { zh: "旅人啊，把你的金币花得明智些。",
-    py: ["lǚ","rén","a","bǎ","nǐ","de","jīn","bì","huā","de","míng","zhì","xiē"],
-    en: "Spend your coins wisely, traveler." },
+  "menu.sub":   { zh: "旅人啊，用积分明智地点餐吧。",
+    py: ["lǚ","rén","a","yòng","jī","fēn","míng","zhì","de","diǎn","cān","ba"],
+    en: "Spend your ★ points wisely, traveler." },
   "menu.buy":   { zh: "加入", py: ["jiā", "rù"], en: "Add" },
   // ---- about / story ----
   "story.title":{ zh: "我们的故事", py: ["wǒ", "men", "de", "gù", "shi"], en: "Our Story" },
