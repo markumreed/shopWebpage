@@ -522,3 +522,51 @@ main, .topbar { position: relative; z-index: 1; }
   .master, .press-start, .dialogue-next, .red-button:hover .rb-cap,
   .battle-btn, .tray-battle, .hero-speedlines { animation: none; }
 }
+
+/* ===== Sushi tray + hold-to-eat ===== */
+.tray-eaten { font-family: var(--game); font-size: 9px; color: var(--gold); margin-left: auto; margin-right: 12px; }
+.tray-hint { font-family: var(--body); font-size: 12px; color: var(--text-dim); text-align: center; padding: 8px 0 16px; }
+
+.tray-piece {
+  position: relative; display: flex; align-items: center; gap: 12px;
+  padding: 10px; margin-bottom: 10px; cursor: pointer; user-select: none;
+  border: 2px solid var(--win-edge); border-radius: 10px;
+  background: linear-gradient(180deg, #2a3a92, #18225f);
+  box-shadow: 0 0 0 2px var(--win-ring), inset 0 2px 0 rgba(255,255,255,.12);
+  touch-action: none;            /* let pointer-hold work on touch without scrolling */
+  overflow: hidden;
+}
+.tray-piece .tp-img {
+  width: 44px; height: 44px; object-fit: cover; border-radius: 7px;
+  border: 2px solid #0a1030; image-rendering: auto; flex: none;
+}
+.tray-piece .tp-name { flex: 1; font-family: var(--kana); font-weight: 700; font-size: 14px; color: var(--text); }
+.tray-piece .tp-name .en-gloss { font-family: var(--body); color: var(--text-dim); }
+/* fill bar that grows while held */
+.tray-piece .eat-fill {
+  position: absolute; left: 0; bottom: 0; height: 4px; width: 0%;
+  background: linear-gradient(90deg, var(--good), #8af0bb); box-shadow: 0 0 8px var(--good);
+}
+.tray-piece.eating { animation: chew-shake .12s steps(2) infinite; }
+@keyframes chew-shake { 0%{transform:translate(0,0)} 50%{transform:translate(-1px,1px)} 100%{transform:translate(1px,0)} }
+
+/* bite particles spawned on a finished bite */
+.bite {
+  position: fixed; z-index: 60; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--gold); pointer-events: none; animation: bite-fly .5s ease-out forwards;
+}
+@keyframes bite-fly { to { transform: translate(var(--bx), var(--by)) scale(.2); opacity: 0; } }
+
+/* ごちそうさま flourish */
+.eat-flourish {
+  position: fixed; left: 50%; top: 40%; transform: translate(-50%,-50%) scale(.8);
+  z-index: 70; pointer-events: none;
+  font-family: var(--game); font-size: 16px; color: var(--gold);
+  text-shadow: 0 2px 0 var(--gold-sh), 0 0 16px rgba(255,210,61,.7);
+}
+.eat-flourish.show { animation: flourish .9s ease-out forwards; }
+@keyframes flourish {
+  0% { opacity: 0; transform: translate(-50%,-50%) scale(.7); }
+  25% { opacity: 1; transform: translate(-50%,-50%) scale(1.1); }
+  100% { opacity: 0; transform: translate(-50%,-90%) scale(1); }
+}
