@@ -53,6 +53,7 @@ export function resolveCollision(a, b, params) {
   const {
     restitution, collisionSpinDrain, superDrain = 0,
     oppositeSpinMult = 1, sameSpinMult = 1,
+    spinSteal = 0, scrapeCoupling = 0, burstGain = 0,
   } = params;
   const dx = b.x - a.x;
   const dy = b.y - a.y;
@@ -92,18 +93,41 @@ export function resolveCollision(a, b, params) {
   b2.x = b.x + nx * (overlap / 2);
   b2.y = b.y + ny * (overlap / 2);
 
-  // both lose spin on contact; opposite spin directions "spin-steal" — they
-  // drain harder than same-spin clashes. Beys without a `dir` default to +1.
+  // both lose spin on contact; opposite spins "spin-steal" harder than same-spin
   const sameDir = (a.dir ?? 1) === (b.dir ?? 1);
   const drain = collisionSpinDrain * (sameDir ? sameSpinMult : oppositeSpinMult);
-  // each bey's loss scales with the OTHER's attack and its own defense
-  // (mults default to 1, so a build-less bey drains exactly as before).
-  // clamp the defense divisor so a stray non-positive defMult can't produce
-  // Infinity spin loss (real builds yield 0.7..1.3 via statsToPhysics).
   const aLoss = drain * (b.atkMult ?? 1) / Math.max(a.defMult ?? 1, 0.01);
   const bLoss = drain * (a.atkMult ?? 1) / Math.max(b.defMult ?? 1, 0.01);
   a2.spin = Math.max(0, a.spin - aLoss);
   b2.spin = Math.max(0, b.spin - bLoss);
+
+  // SPIN-STEAL: opposite-spin contact transfers angular momentum from the
+  // faster spinner to the slower, narrowing the gap (never below 0).
+  if (spinSteal > 0 && !sameDir) {
+    const transfer = spinSteal * Math.abs(a2.spin - b2.spin);
+    if (a2.spin >= b2.spin) { a2.spin = Math.max(0, a2.spin - transfer); b2.spin += transfer; }
+    else { b2.spin = Math.max(0, b2.spin - transfer); a2.spin += transfer; }
+  }
+
+  // SCRAPE COUPLING: each bey converts a little spin into a tangential launch on
+  // the other (perpendicular to the contact normal, signed by its spin dir).
+  if (scrapeCoupling > 0) {
+    const tx = -ny, ty = nx;                       // unit tangent
+    const sa = scrapeCoupling * (a.spin / 100) * (a.dir ?? 1);
+    const sb = scrapeCoupling * (b.spin / 100) * (b.dir ?? 1);
+    b2.vx += tx * sa; b2.vy += ty * sa;            // a scrapes b
+    a2.vx -= tx * sb; a2.vy -= ty * sb;            // b scrapes a (opposite tangent)
+  }
+
+  // BURST STRESS: hard hits accumulate stress scaled by the other's attack;
+  // crossing a bey's threshold bursts it (alive=false, burst=true).
+  if (burstGain > 0) {
+    const force = Math.abs(velAlongNormal);
+    a2.burstStress = (a.burstStress ?? 0) + force * burstGain * (b.atkMult ?? 1);
+    b2.burstStress = (b.burstStress ?? 0) + force * burstGain * (a.atkMult ?? 1);
+    if (a2.burstStress >= (a.burstThreshold ?? Infinity)) { a2.burst = true; a2.alive = false; }
+    if (b2.burstStress >= (b.burstThreshold ?? Infinity)) { b2.burst = true; b2.alive = false; }
+  }
 
   // special attack: a bey with `special` set drains extra spin from the other,
   // then its flag clears (one-shot).

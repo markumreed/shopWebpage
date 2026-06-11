@@ -444,3 +444,42 @@ test("stepBey: no precession when wobbleSpin is unset (existing behavior)", () =
   const without   = stepBey(bey({ x: 40, spin: 60 }), STADIUM, PARAMS);
   assert.equal(withParam.vx, without.vx); // spin 60 >= 50 -> identical
 });
+
+test("resolveCollision: opposite-spin contact spin-steals — the gap narrows", () => {
+  const a = bey({ x: 0, y: 0, spin: 90, dir: 1, radius: 10 });
+  const b = bey({ x: 15, y: 0, spin: 30, dir: -1, radius: 10 });
+  const [a2, b2] = resolveCollision(a, b, { ...COLL, oppositeSpinMult: 1, spinSteal: 0.2 });
+  assert.ok(Math.abs(a2.spin - b2.spin) < Math.abs(a.spin - b.spin), "gap narrows");
+  assert.ok(a2.spin >= 0 && b2.spin >= 0, "no negative spin");
+});
+
+test("resolveCollision: same-spin contact does NOT spin-steal", () => {
+  const a = bey({ x: 0, y: 0, spin: 90, dir: 1, radius: 10 });
+  const b = bey({ x: 15, y: 0, spin: 30, dir: 1, radius: 10 });
+  const off = resolveCollision(a, b, { ...COLL, sameSpinMult: 1, spinSteal: 0 });
+  const on  = resolveCollision(a, b, { ...COLL, sameSpinMult: 1, spinSteal: 0.2 });
+  assert.deepEqual([off[0].spin, off[1].spin], [on[0].spin, on[1].spin]);
+});
+
+test("resolveCollision: scrape coupling launches a still opponent tangentially", () => {
+  const a = bey({ x: 0, y: 0, spin: 100, dir: 1, vx: 1, vy: 0, radius: 10 });
+  const b = bey({ x: 15, y: 0, spin: 0, dir: 1, vx: 0, vy: 0, radius: 10 });
+  const [, b2] = resolveCollision(a, b, { ...COLL, scrapeCoupling: 2 });
+  assert.notEqual(b2.vy, 0, "b gains tangential (y) velocity from a's spin");
+});
+
+test("resolveCollision: burst stress past the threshold bursts the bey", () => {
+  const a = bey({ x: 0, y: 0, spin: 100, vx: 0, vy: 0, radius: 10, mass: 1 });
+  const b = bey({ x: 15, y: 0, spin: 100, vx: -30, vy: 0, radius: 10, mass: 1, burstThreshold: 5 });
+  const [, b2] = resolveCollision(a, b, { ...COLL, burstGain: 1 });
+  assert.ok(b2.burstStress >= 5, "stress accumulated");
+  assert.equal(b2.burst, true);
+  assert.equal(b2.alive, false);
+});
+
+test("resolveCollision: no threshold means no burst (default safe)", () => {
+  const a = bey({ x: 0, y: 0, spin: 100, vx: 0, radius: 10 });
+  const b = bey({ x: 15, y: 0, spin: 100, vx: -30, radius: 10 });
+  const [, b2] = resolveCollision(a, b, { ...COLL, burstGain: 1 });
+  assert.ok(!b2.burst, "no threshold -> never bursts");
+});
