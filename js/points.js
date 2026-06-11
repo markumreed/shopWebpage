@@ -21,10 +21,11 @@ export function savePoints(n) {
   }
 }
 
-// pointsForRound — points awarded when a round finishes: +1 for the round win,
-// +3 bonus when that win also clinches the match.
-export function pointsForRound(wonRound, wonMatch) {
-  return (wonRound ? 1 : 0) + (wonMatch ? 3 : 0);
+// ★ awarded to the shop wallet when a player wins a finish, plus a bonus when
+// that finish clinches the match.
+export const MATCH_BONUS = 2;
+export function shopPointsForFinish(outcome, finishValue, matchWon) {
+  return (outcome === "player" ? finishValue : 0) + (matchWon ? MATCH_BONUS : 0);
 }
 
 export function canAfford(balance, cost) {
