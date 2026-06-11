@@ -37,6 +37,10 @@
         <span class="coin-ico" aria-hidden="true">◎</span> <span data-i18n="nav.bag"></span>
         <span id="cart-count" class="cart-badge">0</span>
       </button>
+      <button id="tray-toggle" class="cart-toggle" aria-label="打开托盘">
+        <span class="coin-ico" aria-hidden="true">🍱</span> <span data-i18n="hud.tray"></span>
+        <span id="tray-count" class="cart-badge">0</span>
+      </button>
     </nav>
   </header>
 
@@ -106,6 +110,18 @@
     </div>
   </aside>
   <div id="cart-scrim" class="scrim" hidden></div>
+  <!-- TRAY DRAWER — eat your ordered sushi -->
+  <aside id="tray-drawer" class="cart-drawer tray-drawer" aria-hidden="true">
+    <div class="cart-head">
+      <h2 data-i18n="tray.title"></h2>
+      <span class="tray-eaten"><span data-i18n="tray.eaten"></span> <span id="eaten-count">0</span></span>
+      <button id="tray-close" class="cart-close" aria-label="关闭托盘">✕</button>
+    </div>
+    <ul id="tray-lines" class="cart-lines"><!-- rendered by main.js --></ul>
+    <p class="tray-hint" aria-hidden="true">👆 hold a piece to eat it</p>
+  </aside>
+  <div id="tray-scrim" class="scrim" hidden></div>
+  <div id="eat-flourish" class="eat-flourish" hidden></div>
 
   <!-- BUILDER SCREEN (hidden until red button) -->
   <div id="builder" class="builder" hidden>
