@@ -8,8 +8,9 @@ import { combineStats, statsToPhysics } from "./build.js";
 import { BLADES, RATCHETS, BITS } from "./parts.js";
 import { biHtml, biHtmlEntry } from "./i18n.js";
 
-const STADIUM_PARAMS = { dt: 1, friction: 0.012, spinDecay: 0.08, centering: 0.0016 };
-const COLLISION = { restitution: 1.05, collisionSpinDrain: 1.5, superDrain: 25, oppositeSpinMult: 2.2, sameSpinMult: 0.7 };
+const STADIUM_PARAMS = { dt: 1, friction: 0.012, spinDecay: 0.08, centering: 0.0016, wobbleSpin: 28 };
+const COLLISION = { restitution: 1.05, collisionSpinDrain: 1.5, superDrain: 25, oppositeSpinMult: 2.2, sameSpinMult: 0.7,
+  spinSteal: 0.12, scrapeCoupling: 1.1, burstGain: 0.6 };
 const START_SPIN = 100;
 const BURST_GAIN = 20;        // player burst-meter % gained per clash
 const AI_BURST_GAIN = 17;     // rival charges its special a touch slower than you
@@ -33,6 +34,10 @@ function makeBey(name, x, y, color, dir = 1, profile = {}) {
   } = profile;
   return {
     name, x, y, vx: 0, vy: 0, spin: spin0, spin0, radius: 22, mass,
+    inertia: mass,                       // heavier beys hold spin longer
+    burstStress: 0, burst: false,
+    // burst resistance is encoded in centeringMult (1..1.8); map it to a stress cap
+    burstThreshold: 70 + 100 * Math.min(1, Math.max(0, (centeringMult - 1) / 0.8)),
     alive: true, color, special: false, dir, dashCd: 0,
     railed: false, railTheta: 0, railDir: 1, railSpeed: 0,
     atkMult, defMult, spinDecayMult, centeringMult, launchMult, gear,
