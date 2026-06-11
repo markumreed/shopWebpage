@@ -422,3 +422,25 @@ test("resolveCollision: with no atk/def mults, drain stays symmetric (regression
   assert.equal(a2.spin, 45);
   assert.equal(b2.spin, 45);
 });
+
+test("stepBey: higher moment of inertia loses less spin", () => {
+  const light = stepBey(bey({ spin: 100, inertia: 1 }), STADIUM, PARAMS);
+  const heavy = stepBey(bey({ spin: 100, inertia: 2 }), STADIUM, PARAMS);
+  assert.equal(light.spin, 99);     // 100 - 1*1/1
+  assert.equal(heavy.spin, 99.5);   // 100 - 1*1/2
+});
+
+test("stepBey: a low-spin bey precesses — weaker inward pull + wobble advances", () => {
+  const P = { ...PARAMS, wobbleSpin: 50 };
+  const high = stepBey(bey({ x: 40, spin: 100 }), STADIUM, P); // >= wobbleSpin: no precession
+  const low  = stepBey(bey({ x: 40, spin: 10  }), STADIUM, P); // < wobbleSpin: precesses
+  assert.ok(low.vx > high.vx, "precessing bey is pulled toward center less hard");
+  assert.notEqual(low.wobble, 0, "wobble phase advanced while precessing");
+  assert.equal(high.wobble, 0, "no wobble advance above the threshold");
+});
+
+test("stepBey: no precession when wobbleSpin is unset (existing behavior)", () => {
+  const withParam = stepBey(bey({ x: 40, spin: 60 }), STADIUM, { ...PARAMS, wobbleSpin: 50 });
+  const without   = stepBey(bey({ x: 40, spin: 60 }), STADIUM, PARAMS);
+  assert.equal(withParam.vx, without.vx); // spin 60 >= 50 -> identical
+});

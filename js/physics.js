@@ -4,11 +4,30 @@ export function distance(ax, ay, bx, by) {
   return Math.hypot(ax - bx, ay - by);
 }
 
+// --- spin-dynamics tuning ---
+const PRECESS_FLOOR = 0.35; // fraction of centering retained at zero spin
+const PRECESS_STEP  = 0.5;  // wobble phase advanced per frame while precessing
+const WOBBLE_AMP    = 1.2;  // max wobble position offset (px) at spent spin
+
 export function stepBey(bey, stadium, params) {
   if (!bey.alive) return bey;
-  const { dt, friction, spinDecay, centering } = params;
-  const centeringMult = bey.centeringMult ?? 1;
+  const { dt, friction, spinDecay, centering, wobbleSpin = 0 } = params;
   const spinDecayMult = bey.spinDecayMult ?? 1;
+  const inertia = bey.inertia ?? 1;
+  let centeringMult = bey.centeringMult ?? 1;
+
+  // gyroscopic precession: a low-spin top wobbles and loses its grip on the
+  // bowl — centering weakens, so it drifts toward the rim (the loss spiral).
+  let wobble = bey.wobble ?? 0;
+  let wobX = 0, wobY = 0;
+  if (wobbleSpin > 0 && bey.spin < wobbleSpin) {
+    const frac = Math.max(0, bey.spin) / wobbleSpin;        // 1 entering, 0 dead
+    centeringMult *= PRECESS_FLOOR + (1 - PRECESS_FLOOR) * frac;
+    wobble += PRECESS_STEP;
+    const amp = WOBBLE_AMP * (1 - frac);
+    wobX = Math.cos(wobble) * amp;
+    wobY = Math.sin(wobble) * amp;
+  }
 
   // bowl centering force toward stadium center (scaled per-bey)
   const ax = (stadium.cx - bey.x) * centering * centeringMult;
@@ -17,20 +36,17 @@ export function stepBey(bey, stadium, params) {
   let vx = (bey.vx + ax * dt) * (1 - friction * dt);
   let vy = (bey.vy + ay * dt) * (1 - friction * dt);
 
-  const x = bey.x + vx * dt;
-  const y = bey.y + vy * dt;
+  const x = bey.x + vx * dt + wobX;
+  const y = bey.y + vy * dt + wobY;
 
-  let spin = bey.spin - spinDecay * spinDecayMult * dt;
+  // spin decay scaled by stamina and divided by moment of inertia (heavier/
+  // wider beys hold their spin longer)
+  let spin = bey.spin - (spinDecay * spinDecayMult / inertia) * dt;
   let alive = true;
-  if (spin <= 0) {
-    spin = 0;
-    alive = false;
-  }
-  if (distance(x, y, stadium.cx, stadium.cy) > stadium.r) {
-    alive = false;
-  }
+  if (spin <= 0) { spin = 0; alive = false; }
+  if (distance(x, y, stadium.cx, stadium.cy) > stadium.r) { alive = false; }
 
-  return { ...bey, x, y, vx, vy, spin, alive };
+  return { ...bey, x, y, vx, vy, spin, alive, wobble };
 }
 
 export function resolveCollision(a, b, params) {
