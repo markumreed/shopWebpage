@@ -483,3 +483,13 @@ test("resolveCollision: no threshold means no burst (default safe)", () => {
   const [, b2] = resolveCollision(a, b, { ...COLL, burstGain: 1 });
   assert.ok(!b2.burst, "no threshold -> never bursts");
 });
+
+test("stepBey: burst stress decays slowly when not hit (clamped at 0)", () => {
+  const P = { ...PARAMS, burstDecay: 2 };
+  const a = stepBey(bey({ spin: 100, burstStress: 5 }), STADIUM, P);
+  assert.equal(a.burstStress, 3);                 // 5 - 2
+  const b = stepBey(bey({ spin: 100, burstStress: 1 }), STADIUM, P);
+  assert.equal(b.burstStress, 0);                 // clamped, not negative
+  const c = stepBey(bey({ spin: 100 }), STADIUM, P); // no burstStress field -> none added
+  assert.equal("burstStress" in c, false);
+});

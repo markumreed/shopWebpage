@@ -11,7 +11,7 @@ const WOBBLE_AMP    = 1.2;  // max wobble position offset (px) at spent spin
 
 export function stepBey(bey, stadium, params) {
   if (!bey.alive) return bey;
-  const { dt, friction, spinDecay, centering, wobbleSpin = 0 } = params;
+  const { dt, friction, spinDecay, centering, wobbleSpin = 0, burstDecay = 0 } = params;
   const spinDecayMult = bey.spinDecayMult ?? 1;
   const inertia = bey.inertia ?? 1;
   let centeringMult = bey.centeringMult ?? 1;
@@ -46,7 +46,12 @@ export function stepBey(bey, stadium, params) {
   if (spin <= 0) { spin = 0; alive = false; }
   if (distance(x, y, stadium.cx, stadium.cy) > stadium.r) { alive = false; }
 
-  return { ...bey, x, y, vx, vy, spin, alive, wobble };
+  // burst stress relaxes between exchanges (only for beys that track it)
+  const relaxed = bey.burstStress != null
+    ? { burstStress: Math.max(0, bey.burstStress - burstDecay) }
+    : {};
+
+  return { ...bey, x, y, vx, vy, spin, alive, wobble, ...relaxed };
 }
 
 export function resolveCollision(a, b, params) {

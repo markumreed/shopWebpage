@@ -8,7 +8,7 @@ import { combineStats, statsToPhysics } from "./build.js";
 import { BLADES, RATCHETS, BITS } from "./parts.js";
 import { biHtml, biHtmlEntry } from "./i18n.js";
 
-const STADIUM_PARAMS = { dt: 1, friction: 0.012, spinDecay: 0.08, centering: 0.0016, wobbleSpin: 28 };
+const STADIUM_PARAMS = { dt: 1, friction: 0.012, spinDecay: 0.08, centering: 0.0016, wobbleSpin: 28, burstDecay: 0.25 };
 const COLLISION = { restitution: 1.05, collisionSpinDrain: 1.5, superDrain: 25, oppositeSpinMult: 2.2, sameSpinMult: 0.7,
   spinSteal: 0.12, scrapeCoupling: 1.1, burstGain: 0.6 };
 const START_SPIN = 100;
