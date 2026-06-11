@@ -62,6 +62,11 @@ export const STRINGS = {
   "hud.points": { zh: "积分", py: ["jī", "fēn"], en: "Points" },
   "hud.battle": { zh: "去对战", py: ["qù", "duì", "zhàn"], en: "Battle" },
   "menu.need":  { zh: "还差", py: ["hái", "chà"], en: "need" },
+  "hud.tray":   { zh: "托盘", py: ["tuō","pán"], en: "Tray" },
+  "tray.title": { zh: "你的托盘", py: ["nǐ","de","tuō","pán"], en: "Your Tray" },
+  "tray.empty": { zh: "托盘空空，去点些寿司吧。", py: ["tuō","pán","kōng","kōng","qù","diǎn","xiē","shòu","sī","ba"], en: "Tray's empty — go order some sushi." },
+  "tray.eaten": { zh: "已吃", py: ["yǐ","chī"], en: "Eaten" },
+  "eat.done":   { zh: "我吃饱了！", py: ["wǒ","chī","bǎo","le"], en: "Gochisōsama 🥢" },
   // ---- hero ----
   "hero.kana":  { zh: "回转寿司", py: ["huí", "zhuàn", "shòu", "sī"], en: "Conveyor-belt sushi" },
   "hero.title": { zh: "旋转寿司", py: ["xuán", "zhuàn", "shòu", "sī"], en: "Spin Sushi" },
