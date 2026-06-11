@@ -349,8 +349,6 @@ export function mountArena(opts) {
 
   // ---- main loop ----
   function loop() {
-    const pPrev = player.alive, oPrev = opponent.alive;
-
     // AI agency: steer the rival each frame — but only while it's free, not
     // while it's locked onto the rail (the rail dictates its motion).
     if (!opponent.railed) {
