@@ -250,7 +250,6 @@ function placeOrder() {
   cart = [];
   saveCart(cart);
   renderAll();
-  renderTrayDrawer();
   const confirm = $("#cart-confirm");
   confirm.hidden = false;
   setTimeout(() => { confirm.hidden = true; }, 3000);
