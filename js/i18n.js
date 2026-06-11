@@ -145,6 +145,10 @@ export const STRINGS = {
     py: ["bǎ","duì","shǒu","zhuàng","chū","chǎng","dì","chū","jiè","huò","hào","jìn","qí","xuán","zhuàn","tíng","zhuàn","xiān","yíng","liǎng","huí","hé","zhě","huò","shèng"],
     en: "Knock the rival out of the ring (RING OUT), or outspin them (SPIN OUT). First to 2 round wins takes the match." },
   "arena.title": { zh: "陀螺竞技场", py: ["tuó", "luó", "jìng", "jì", "chǎng"], en: "Beyblade Arena" },
+  "arena.finish.spin":   { zh: "自旋结束", py: ["zì","xuán","jié","shù"], en: "Spin Finish +1" },
+  "arena.finish.over":   { zh: "击飞结束", py: ["jī","fēi","jié","shù"], en: "Over Finish +2" },
+  "arena.finish.burst":  { zh: "爆裂结束", py: ["bào","liè","jié","shù"], en: "Burst Finish +2" },
+  "arena.finish.xtreme": { zh: "极限结束", py: ["jí","xiàn","jié","shù"], en: "Xtreme Finish +3" },
   // ---- builder ----
   "build.title": { zh: "组装你的陀螺", py: ["zǔ", "zhuāng", "nǐ", "de", "tuó", "luó"], en: "Build Your Beyblade" },
   "build.blade": { zh: "刀环", py: ["dāo", "huán"], en: "Blade" },
