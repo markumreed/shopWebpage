@@ -1,28 +1,33 @@
-// js/match.js — pure best-of-3 round/score/streak state. No DOM, no canvas.
+// js/match.js — pure Beyblade X scoring: points by finish type, first to 4. No DOM.
 
-// First to this many round wins takes the match.
-export const WIN_TARGET = 2;
+// First to this many points takes the match.
+export const POINT_TARGET = 4;
 
-// Fresh match state. `streak` carries the player's current match-win streak.
+// Points awarded by finish type (Beyblade X).
+export const FINISH_POINTS = { spin: 1, over: 2, burst: 2, xtreme: 3 };
+
+// Fresh match state. `you`/`rival` are POINT totals; `streak` carries the
+// player's current match-win streak.
 export function newMatch(streak = 0) {
   return { round: 1, you: 0, rival: 0, streak, matchOver: false, matchWinner: null };
 }
 
-// Apply a round outcome and return a NEW state (input is never mutated).
-// outcome: "player" | "opponent" | "draw"
-//   - "draw": no score change, same round replays.
-//   - otherwise: the winner's tally increments and the round advances.
-// When a side reaches WIN_TARGET the match ends: matchOver=true, matchWinner set,
-// and the streak increments on a player match win or resets to 0 on a loss.
-export function recordRound(state, outcome) {
+// Apply a finished round and return a NEW state (input never mutated).
+//   outcome: "player" | "opponent" | "draw"
+//   finish:  a FINISH_POINTS key ("spin"|"over"|"burst"|"xtreme"); ignored on draw.
+// draw → no score change, same round replays. Otherwise the winner gains
+// FINISH_POINTS[finish]; reaching POINT_TARGET ends the match (streak +1 on a
+// player match win, reset to 0 on a loss).
+export function recordRound(state, outcome, finish) {
   if (state.matchOver) return state;
   if (outcome === "draw") return { ...state };
 
-  const you = state.you + (outcome === "player" ? 1 : 0);
-  const rival = state.rival + (outcome === "opponent" ? 1 : 0);
+  const pts = FINISH_POINTS[finish] ?? 0;
+  const you = state.you + (outcome === "player" ? pts : 0);
+  const rival = state.rival + (outcome === "opponent" ? pts : 0);
 
-  const matchOver = you >= WIN_TARGET || rival >= WIN_TARGET;
-  const matchWinner = matchOver ? (you >= WIN_TARGET ? "player" : "opponent") : null;
+  const matchOver = you >= POINT_TARGET || rival >= POINT_TARGET;
+  const matchWinner = matchOver ? (you >= POINT_TARGET ? "player" : "opponent") : null;
   const streak = matchOver
     ? (matchWinner === "player" ? state.streak + 1 : 0)
     : state.streak;
