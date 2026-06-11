@@ -137,6 +137,12 @@ export function spinOut() {
   blip("sine", 240, 0.7, 0.16, { glideTo: 45 });
 }
 
+// A short crunchy chew — two quick filtered-noise bites. Used by hold-to-eat.
+export function crunch() {
+  noise(0.05, 0.18, 1800, 4);
+  noise(0.06, 0.14, 1200, 3);
+}
+
 // Victory fanfare (ascending) / defeat sting (descending).
 export function win() {
   const notes = [523, 659, 784, 1047];
