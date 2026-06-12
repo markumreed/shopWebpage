@@ -1,7 +1,10 @@
 /* Garage / builder — 16-bit JRPG window. Reuses theme.css tokens (--win-*,
    --gold*, --sky-*, --game, --kana). Reached from the ⚔ Battle / red button. */
 .builder {
-  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; align-items: safe center; justify-content: center;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: max(20px, env(safe-area-inset-top)) 14px max(20px, env(safe-area-inset-bottom));
   color: var(--text); font-family: var(--body);
   background:
     radial-gradient(120% 90% at 50% 18%, var(--horizon), transparent 55%),
