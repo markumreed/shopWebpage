@@ -160,8 +160,8 @@ export function mountArena(opts) {
     cancelAnimationFrame(raf);
     rivalDir = Math.random() < 0.5 ? 1 : -1;
     rivalBuild = randomBuild();
-    player = makeBey("You", stadium.cx - 120, stadium.cy, "#2bf2ff", playerDir, buildProfile(playerBuild));
-    opponent = makeBey("Rival", stadium.cx + 120, stadium.cy, "#ff2bd6", rivalDir, buildProfile(rivalBuild));
+    player = makeBey("You", stadium.cx - 120, stadium.cy, "#4fd0ff", playerDir, buildProfile(playerBuild));
+    opponent = makeBey("Rival", stadium.cx + 120, stadium.cy, "#ff5775", rivalDir, buildProfile(rivalBuild));
     player.img = imgFor(playerBuild.blade.image);
     opponent.img = imgFor(rivalBuild.blade.image);
     phase = "ready"; // ready -> spinning -> done
@@ -451,7 +451,7 @@ export function mountArena(opts) {
 
     const big = finish === "over" || finish === "xtreme" || finish === "burst";
     triggerShake(big ? "lg" : "md");
-    if (big) { spawnBurst(stadium.cx, stadium.cy, "#ff2bd6"); draw(); }
+    if (big) { spawnBurst(stadium.cx, stadium.cy, "#ffd23d"); draw(); }
     showBanner(biHtml("arena.finish." + finish));
 
     bannerTimer = setTimeout(() => {
@@ -499,15 +499,15 @@ export function mountArena(opts) {
       stadium.cx, stadium.cy, stadium.r * 0.1,
       stadium.cx, stadium.cy, stadium.r
     );
-    floor.addColorStop(0, "rgba(20,28,40,.9)");
-    floor.addColorStop(0.7, "rgba(12,18,28,.85)");
-    floor.addColorStop(1, "rgba(5,8,14,.95)");
+    floor.addColorStop(0, "rgba(40,54,128,.85)");
+    floor.addColorStop(0.7, "rgba(18,28,84,.9)");
+    floor.addColorStop(1, "rgba(8,12,40,.96)");
     ctx.fillStyle = floor;
     ctx.beginPath();
     ctx.arc(stadium.cx, stadium.cy, stadium.r, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = "rgba(43,242,255,.12)";
+    ctx.strokeStyle = "rgba(255,210,61,.14)";
     ctx.lineWidth = 1.5;
     for (let i = 1; i <= 3; i++) {
       ctx.beginPath();
@@ -533,9 +533,9 @@ export function mountArena(opts) {
     ctx.restore();
 
     // stadium rim
-    ctx.strokeStyle = "rgba(43,242,255,.5)";
+    ctx.strokeStyle = "rgba(234,241,255,.6)";
     ctx.lineWidth = 4;
-    ctx.shadowColor = "rgba(43,242,255,.6)";
+    ctx.shadowColor = "rgba(120,150,255,.7)";
     ctx.shadowBlur = 18;
     ctx.beginPath();
     ctx.arc(stadium.cx, stadium.cy, stadium.r, 0, Math.PI * 2);
