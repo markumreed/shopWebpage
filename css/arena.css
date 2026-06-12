@@ -1,4 +1,5 @@
-/* Arena (style C: neon) + transformation from shop */
+/* Arena — 16-bit JRPG battle screen. Reuses the front-page tokens from theme.css
+   (--win-*, --gold*, --sky-*, --game, --kana). The shop dims behind the overlay. */
 
 /* Transformation: when battling, shake + dim the shop behind the overlay */
 body.battling { overflow: hidden; }
@@ -30,134 +31,168 @@ body.battling .topbar { filter: brightness(.25) saturate(.4); transition: filter
 .shake-md { animation: shake-md .45s linear; }
 .shake-lg { animation: shake-lg .6s linear; }
 
-/* Overlay */
+/* ---------- Overlay: a night-sky stadium ---------- */
 .arena {
   position: fixed; inset: 0; z-index: 60;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
-  background: radial-gradient(circle at 50% 30%, #1a1140, #07060f 70%);
-  color: #eaf7ff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  background:
+    radial-gradient(120% 90% at 50% 16%, var(--horizon), transparent 55%),
+    linear-gradient(180deg, var(--sky-1) 0%, var(--sky-2) 46%, var(--sky-3) 100%);
+  color: var(--text);
 }
 .arena[hidden] { display: none; }
+/* dithered starfield over the stadium */
+.arena::before {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: .4;
+  background-image:
+    radial-gradient(rgba(255,255,255,.85) 1px, transparent 1.6px),
+    radial-gradient(rgba(180,200,255,.5) 1px, transparent 1.6px);
+  background-size: 72px 72px, 116px 116px; background-position: 0 0, 40px 60px;
+}
+.arena > * { position: relative; z-index: 1; }
 
-.arena-hud { position: absolute; top: 0; left: 0; right: 0;
-  display: flex; align-items: center; justify-content: space-between; padding: 16px 22px; }
-.arena-title { font-family: var(--display, sans-serif); font-style: italic; text-transform: uppercase;
-  font-size: 28px; letter-spacing: 2px; text-shadow: 0 0 16px #ff2bd6, 0 0 30px #2bf2ff; }
-.arena-title span { color: #2bf2ff; }
-.arena-exit { background: transparent; border: 1.5px solid #2bf2ff; color: #2bf2ff; padding: 8px 14px;
-  font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 0 0 14px rgba(43,242,255,.5); }
-.arena-exit:hover { background: #2bf2ff; color: #07060f; }
+/* ---------- HUD bar ---------- */
+.arena-hud { position: absolute; top: 0; left: 0; right: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; }
+.arena-title { font-family: var(--game); font-size: 13px; letter-spacing: 1px; color: var(--gold);
+  text-shadow: 0 2px 0 var(--gold-sh), 0 3px 0 rgba(0,0,0,.5); display: inline-flex; align-items: baseline; gap: 8px; }
+.arena-title .bi-zh { font-family: var(--kana); font-weight: 900; color: var(--gold); }
+.arena-title .en-gloss { font-family: var(--game); font-size: .7em; color: var(--text); opacity: 1; }
+
+/* command buttons (exit / mute) — blue JRPG windows */
+.arena-exit, .arena-mute {
+  font-family: var(--game); font-size: 9px; cursor: pointer; color: var(--text);
+  background: linear-gradient(180deg, #2a3a92, #18225f);
+  border: 2px solid var(--win-edge); border-radius: 8px;
+  box-shadow: 0 0 0 2px var(--win-ring), inset 0 2px 0 rgba(255,255,255,.16), 0 3px 0 rgba(0,0,0,.4);
+  text-transform: uppercase; letter-spacing: 1px; transition: transform .08s, filter .12s;
+}
+.arena-exit { padding: 9px 13px; }
+.arena-mute { width: 38px; height: 34px; font-size: 15px; display: grid; place-items: center; }
+.arena-exit:hover, .arena-mute:hover { filter: brightness(1.12); }
+.arena-exit:active, .arena-mute:active { transform: translateY(3px); box-shadow: 0 0 0 2px var(--win-ring), inset 0 2px 0 rgba(255,255,255,.16); }
 .arena-hud-right { display: flex; align-items: center; gap: 10px; }
-.arena-mute { background: transparent; border: 1.5px solid #2bf2ff; color: #2bf2ff;
-  width: 38px; height: 38px; font-size: 18px; line-height: 1; cursor: pointer; border-radius: 6px;
-  box-shadow: 0 0 14px rgba(43,242,255,.5); }
-.arena-mute:hover { background: #2bf2ff; }
 
+/* ---------- The bowl ---------- */
 .arena-canvas { width: min(72vmin, 720px); height: min(72vmin, 720px);
-  border-radius: 50%; box-shadow: 0 0 60px rgba(43,242,255,.35), inset 0 0 80px rgba(255,43,214,.25);
-  background: #0a0a16; }
+  border-radius: 50%; background: #0a1030;
+  border: 3px solid var(--win-edge);
+  box-shadow: 0 0 0 4px var(--win-ring), 0 0 50px rgba(120,150,255,.35),
+    inset 0 0 70px rgba(10,16,48,.8); }
 
-.arena-controls { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; justify-content: center; }
-.ctrl { display: flex; flex-direction: column; align-items: center; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; gap: 6px; }
-.ctrl input[type=range] { width: 160px; accent-color: #2bf2ff; }
+/* ---------- Controls ---------- */
+.arena-controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: center; }
+.ctrl { display: flex; flex-direction: column; align-items: center; gap: 6px;
+  font-family: var(--game); font-size: 8px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim); }
+.ctrl input[type=range] { width: 160px; accent-color: var(--gold); }
 
 .power-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.power-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
-.power-track { width: 160px; height: 14px; background: #15122b; border: 1px solid #2bf2ff; overflow: hidden; }
-.power-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #2bf2ff, #ff2bd6); }
+.power-label { font-family: var(--game); font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); }
+/* shared inset window track */
+.power-track, .meter-track, .bar-track {
+  width: 160px; height: 14px; background: #0d1748; overflow: hidden;
+  border: 2px solid var(--win-edge); border-radius: 6px;
+  box-shadow: 0 0 0 2px var(--win-ring), inset 0 2px 3px rgba(0,0,0,.5);
+}
+.power-fill { width: 0%; height: 100%; background: linear-gradient(90deg, var(--gold-2), var(--gold)); }
+.burst-fill { width: 0%; height: 100%; background: linear-gradient(90deg, var(--orange), var(--gold)); transition: width .1s linear; }
 
 /* Pre-match segmented toggle (spin direction) */
 .ctrl.seg { gap: 6px; }
-.seg-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
-.seg-btns { display: flex; border: 1px solid #2bf2ff; }
-.seg-btn { background: #15122b; color: rgba(234,247,255,.8); border: 0;
-  padding: 8px 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
-  font-size: 12px; cursor: pointer; }
-.seg-btn + .seg-btn { border-left: 1px solid #2bf2ff; }
-.seg-btn.is-on { background: #2bf2ff; color: #07060f; }
+.seg-label { font-family: var(--game); font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); }
+.seg-btns { display: flex; border: 2px solid var(--win-edge); border-radius: 7px; overflow: hidden;
+  box-shadow: 0 0 0 2px var(--win-ring); }
+.seg-btn { background: linear-gradient(180deg, #2a3a92, #18225f); color: var(--text-dim); border: 0;
+  padding: 8px 12px; font-family: var(--game); font-size: 9px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; }
+.seg-btn + .seg-btn { border-left: 2px solid var(--win-edge); }
+.seg-btn.is-on { background: linear-gradient(180deg, #ffd98a, var(--gold)); color: #2a0010; text-shadow: 0 1px 0 rgba(255,255,255,.4); }
 .seg-btn:disabled { cursor: default; opacity: .5; }
 
-/* Rival's rolled spin direction + parts for the round */
-.rival-setup { text-align: center; font-size: 12px; letter-spacing: 1px;
-  text-transform: uppercase; color: #ff2bd6; margin: 0; min-height: 1em;
-  text-shadow: 0 0 10px rgba(255,43,214,.5); }
+/* Rival's rolled spin direction + parts */
+.rival-setup { text-align: center; font-family: var(--game); font-size: 9px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--red); margin: 0; min-height: 1em;
+  text-shadow: 0 0 10px rgba(255,87,117,.5); }
 
-.btn-launch { background: #ff2bd6; color: #07060f; border: 0; padding: 14px 22px; font-weight: 800;
-  text-transform: uppercase; letter-spacing: 1px; cursor: pointer; box-shadow: 0 0 22px rgba(255,43,214,.6); }
-.btn-launch:active { transform: scale(.97); }
-.btn-launch:disabled { opacity: .5; cursor: default; box-shadow: none; }
+/* HOLD TO CHARGE — the primary attack command (gold) */
+.btn-launch { font-family: var(--game); font-size: 11px; cursor: pointer; color: #2a0010;
+  background: linear-gradient(180deg, #ffd98a, var(--gold));
+  border: 2px solid var(--win-edge); border-radius: 8px; padding: 14px 20px;
+  text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 1px 0 rgba(255,255,255,.4);
+  box-shadow: 0 0 0 2px var(--win-ring), inset 0 2px 0 rgba(255,255,255,.35), 0 5px 0 rgba(0,0,0,.4); }
+.btn-launch:hover { filter: brightness(1.07); }
+.btn-launch:active { transform: translateY(3px); box-shadow: 0 0 0 2px var(--win-ring), inset 0 2px 0 rgba(255,255,255,.35); }
+.btn-launch:disabled { opacity: .5; cursor: default; filter: grayscale(.4); }
 
-.arena-banner { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none;
-  font-family: var(--display, sans-serif); font-style: italic; text-transform: uppercase;
-  font-size: clamp(48px, 12vw, 140px); color: #fff;
-  text-shadow: 0 0 24px #ff2bd6, 0 0 48px #2bf2ff; animation: banner-pop .4s ease-out; }
+/* SPECIAL — a red/orange command that pulses when ready */
+.btn-special { font-family: var(--game); font-size: 10px; cursor: pointer; color: #fff;
+  background: linear-gradient(180deg, #ff8aa0, var(--red));
+  border: 2px solid var(--win-edge); border-radius: 8px; padding: 14px 20px;
+  text-transform: uppercase; letter-spacing: 1px;
+  box-shadow: 0 0 0 2px var(--win-ring), inset 0 2px 0 rgba(255,255,255,.2), 0 5px 0 rgba(0,0,0,.4); }
+.btn-special:disabled { opacity: .4; cursor: default; filter: grayscale(.5); }
+.btn-special.ready { animation: special-pulse 1s ease-in-out infinite; }
+@keyframes special-pulse {
+  0%,100% { box-shadow: 0 0 0 2px var(--win-ring), inset 0 2px 0 rgba(255,255,255,.2), 0 5px 0 rgba(0,0,0,.4), 0 0 14px rgba(255,154,61,.7); }
+  50% { box-shadow: 0 0 0 2px var(--win-ring), inset 0 2px 0 rgba(255,255,255,.2), 0 5px 0 rgba(0,0,0,.4), 0 0 26px rgba(255,210,61,1); }
+}
+
+/* ---------- Banner (BATTLE! / finish names) ---------- */
+.arena-banner { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; pointer-events: none;
+  text-align: center; animation: banner-pop .4s ease-out; }
+.arena-banner, .arena-banner .en-gloss {
+  font-family: var(--game); font-size: clamp(28px, 7vw, 78px); color: var(--gold);
+  text-shadow: 4px 4px 0 var(--gold-sh), 7px 7px 0 var(--red-2), 0 0 26px rgba(255,210,61,.4), 9px 10px 0 rgba(0,0,0,.5); }
+.arena-banner .bi-zh { font-family: var(--kana); font-weight: 900; color: var(--gold); }
+.arena-banner .en-gloss { display: block; font-size: .5em; margin-top: 8px; color: var(--text); text-shadow: 0 3px 0 var(--win-ring); }
 .arena-banner[hidden] { display: none; }
 @keyframes banner-pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-/* Scoreboard in the HUD */
-.arena-score { display: flex; align-items: center; gap: 16px; font-weight: 800;
-  text-transform: uppercase; letter-spacing: 1px; font-size: 14px; }
-.score-side.you { color: #2bf2ff; }
-.score-side.rival { color: #ff2bd6; }
-.pips { letter-spacing: 2px; }
-.score-streak { color: #ffd64a; text-shadow: 0 0 12px rgba(255,214,74,.7); }
+/* ---------- Scoreboard ---------- */
+.arena-score { display: flex; align-items: center; gap: 14px; font-family: var(--game); font-size: 10px;
+  text-transform: uppercase; letter-spacing: 1px; }
+.score-side.you { color: #4fd0ff; }
+.score-side.rival { color: var(--red); }
+.pips { letter-spacing: 3px; }
+.score-streak { color: var(--gold); text-shadow: 0 0 10px rgba(255,210,61,.6); }
 
-/* Spin meters above the canvas */
+/* ---------- Spin meters above the bowl ---------- */
 .arena-meters { display: flex; gap: 18px; width: min(72vmin, 720px); }
 .meter { flex: 1; display: flex; align-items: center; gap: 8px; }
 .meter.rival { flex-direction: row-reverse; }
-.meter-label { font-size: 11px; font-weight: 800; letter-spacing: 1px; }
-.meter.you .meter-label { color: #2bf2ff; }
-.meter.rival .meter-label { color: #ff2bd6; }
-.meter-track { flex: 1; height: 12px; background: #15122b; border: 1px solid rgba(234,247,255,.3); overflow: hidden; }
+.meter-label { font-family: var(--game); font-size: 9px; letter-spacing: 1px; }
+.meter.you .meter-label { color: #4fd0ff; }
+.meter.rival .meter-label { color: var(--red); }
+.meter-track { flex: 1; width: auto; }
 .meter-fill { height: 100%; width: 100%; transition: width .08s linear; }
-.meter.you .meter-fill { background: linear-gradient(90deg, #0a6, #2bf2ff); }
-.meter.rival .meter-fill { background: linear-gradient(270deg, #a04, #ff2bd6); }
+.meter.you .meter-fill { background: linear-gradient(90deg, #1c6fb0, #4fd0ff); }
+.meter.rival .meter-fill { background: linear-gradient(270deg, #a02440, var(--red)); }
 
-/* Burst meter reuses the power-track shell with its own fill color */
-.burst-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #ffd64a, #ff7a1a); transition: width .1s linear; }
+/* ---------- Rules + callout ---------- */
+.arena-rules { max-width: 560px; text-align: center; font-family: var(--body); font-size: 13px; line-height: 1.55;
+  color: var(--text-dim); margin: 0; }
+.arena-rules b { color: var(--gold); }
 
-/* SPECIAL button */
-.btn-special { background: #1a1140; color: #ffd64a; border: 1.5px solid #ffd64a;
-  padding: 14px 22px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
-  cursor: pointer; }
-.btn-special:disabled { opacity: .4; cursor: default; }
-.btn-special.ready { animation: special-pulse 1s ease-in-out infinite;
-  box-shadow: 0 0 22px rgba(255,214,74,.8); }
-@keyframes special-pulse {
-  0%,100% { transform: scale(1); box-shadow: 0 0 16px rgba(255,214,74,.6); }
-  50% { transform: scale(1.06); box-shadow: 0 0 30px rgba(255,214,74,1); }
-}
-
-/* Rules blurb */
-.arena-rules { max-width: 540px; text-align: center; font-size: 13px; line-height: 1.5;
-  color: rgba(234,247,255,.8); margin: 0; }
-.arena-rules b { color: #ffd64a; }
-
-/* Impact callout — brief floating text */
-.arena-callout { position: absolute; top: 32%; left: 0; right: 0; text-align: center;
-  pointer-events: none; font-family: var(--display, sans-serif); font-style: italic;
-  text-transform: uppercase; font-size: clamp(28px, 6vw, 64px); font-weight: 900;
-  color: #ffd64a; text-shadow: 0 0 18px #ff7a1a, 0 0 36px #ff2bd6;
-  animation: callout-pop .35s ease-out; }
+.arena-callout { position: absolute; top: 30%; left: 0; right: 0; z-index: 2; text-align: center; pointer-events: none;
+  font-family: var(--game); font-size: clamp(20px, 5vw, 52px); color: var(--gold);
+  text-shadow: 3px 3px 0 var(--gold-sh), 0 0 18px var(--orange); animation: callout-pop .35s ease-out; }
 .arena-callout[hidden] { display: none; }
-@keyframes callout-pop { from { transform: scale(.4) rotate(-4deg); opacity: 0; }
-  to { transform: scale(1) rotate(-4deg); opacity: 1; } }
+@keyframes callout-pop { from { transform: scale(.4) rotate(-3deg); opacity: 0; } to { transform: scale(1) rotate(-3deg); opacity: 1; } }
 
-.part-select { background: #15122b; color: #eaf7ff; border: 1px solid #2bf2ff;
-  font-size: 11px; padding: 5px 6px; text-transform: uppercase; letter-spacing: .5px; }
+/* part dropdowns (shared with builder) */
+.part-select { font-family: var(--body); background: linear-gradient(180deg, #2a3a92, #18225f); color: var(--text);
+  border: 2px solid var(--win-edge); border-radius: 6px; box-shadow: 0 0 0 2px var(--win-ring);
+  font-size: 12px; padding: 6px 7px; }
 
-/* Part thumbnails under each spin meter */
-.build-imgs { display: flex; gap: 3px; }
+/* part thumbnails under each meter */
+.build-imgs { display: flex; gap: 4px; }
 .build-img { width: 26px; height: 26px; object-fit: contain;
-  background: rgba(255,255,255,.06); border-radius: 4px; }
+  background: #0d1748; border: 1px solid var(--win-ring); border-radius: 5px; }
 .meter.rival .build-imgs { flex-direction: row-reverse; }
 
-/* mobile: keep callouts/banners/controls inside the frame */
 @media (max-width: 640px) {
-  .arena-banner { font-size: clamp(32px, 11vw, 72px); }
-  .arena-callout { font-size: clamp(22px, 7vw, 48px); }
+  .arena-banner, .arena-banner .en-gloss { font-size: clamp(22px, 9vw, 56px); }
+  .arena-callout { font-size: clamp(16px, 6vw, 40px); }
   .arena-controls { gap: 10px; }
-  .arena-title { font-size: 16px; }
-  .rival-setup { font-size: 11px; }
+  .arena-title { font-size: 10px; }
+  .rival-setup { font-size: 8px; }
 }
