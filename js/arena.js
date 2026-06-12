@@ -1,15 +1,16 @@
 // arena.js — canvas battle. Pure physics comes from physics.js; round/score
 // state comes from match.js. This file is all DOM/canvas wiring + game feel.
 import { stepBey, resolveCollision, decideOutcome, distance, aiSteer, stepRail, tryCatchRail, cardioidPoint, CARDIOID_MAX_R } from "./physics.js";
-import { newMatch, recordRound, WIN_TARGET } from "./match.js";
-import { pointsForRound } from "./points.js";
+import { newMatch, recordRound, POINT_TARGET, FINISH_POINTS } from "./match.js";
+import { shopPointsForFinish } from "./points.js";
 import * as sfx from "./sound.js";
 import { combineStats, statsToPhysics } from "./build.js";
 import { BLADES, RATCHETS, BITS } from "./parts.js";
 import { biHtml, biHtmlEntry } from "./i18n.js";
 
-const STADIUM_PARAMS = { dt: 1, friction: 0.012, spinDecay: 0.08, centering: 0.0016 };
-const COLLISION = { restitution: 1.05, collisionSpinDrain: 1.5, superDrain: 25, oppositeSpinMult: 2.2, sameSpinMult: 0.7 };
+const STADIUM_PARAMS = { dt: 1, friction: 0.012, spinDecay: 0.08, centering: 0.0016, wobbleSpin: 28, burstDecay: 0.25 };
+const COLLISION = { restitution: 1.05, collisionSpinDrain: 1.5, superDrain: 25, oppositeSpinMult: 2.2, sameSpinMult: 0.7,
+  spinSteal: 0.12, scrapeCoupling: 1.1, burstGain: 0.6 };
 const START_SPIN = 100;
 const BURST_GAIN = 20;        // player burst-meter % gained per clash
 const AI_BURST_GAIN = 17;     // rival charges its special a touch slower than you
@@ -33,6 +34,10 @@ function makeBey(name, x, y, color, dir = 1, profile = {}) {
   } = profile;
   return {
     name, x, y, vx: 0, vy: 0, spin: spin0, spin0, radius: 22, mass,
+    inertia: mass,                       // heavier beys hold spin longer
+    burstStress: 0, burst: false,
+    // burst resistance is encoded in centeringMult (1..1.8); map it to a stress cap
+    burstThreshold: 70 + 100 * Math.min(1, Math.max(0, (centeringMult - 1) / 0.8)),
     alive: true, color, special: false, dir, dashCd: 0,
     railed: false, railTheta: 0, railDir: 1, railSpeed: 0,
     atkMult, defMult, spinDecayMult, centeringMult, launchMult, gear,
@@ -95,7 +100,8 @@ export function mountArena(opts) {
   // ---- scoreboard / meters ----
   function pips(n) {
     let s = "";
-    for (let i = 0; i < WIN_TARGET; i++) s += i < n ? "●" : "○";
+    const filled = Math.min(n, POINT_TARGET);
+    for (let i = 0; i < POINT_TARGET; i++) s += i < filled ? "●" : "○";
     return s;
   }
   function renderScore() {
@@ -348,8 +354,6 @@ export function mountArena(opts) {
 
   // ---- main loop ----
   function loop() {
-    const pPrev = player.alive, oPrev = opponent.alive;
-
     // AI agency: steer the rival each frame — but only while it's free, not
     // while it's locked onto the rail (the rail dictates its motion).
     if (!opponent.railed) {
@@ -387,35 +391,51 @@ export function mountArena(opts) {
 
     const outcome = decideOutcome(player, opponent);
     if (outcome) {
-      // ring-out vs spin-out is decided by where the bey ended up: a bey that
-      // died outside the stadium radius was knocked out (ring-out); otherwise
-      // its spin ran down (spin-out).
-      const ringout =
-        (pPrev && !player.alive && distance(player.x, player.y, stadium.cx, stadium.cy) > stadium.r) ||
-        (oPrev && !opponent.alive && distance(opponent.x, opponent.y, stadium.cx, stadium.cy) > stadium.r);
-      return finishRound(outcome, ringout ? "ringout" : "spinout");
+      return finishRound(outcome, classifyFinish(outcome));
     }
     raf = requestAnimationFrame(loop);
   }
 
-  function finishRound(outcome, reason) {
+  // Map the just-finished round to a Beyblade X finish type. Precedence:
+  // burst > xtreme > over > spin. The loser is the bey that just died; on a
+  // draw the finish is irrelevant (no points awarded).
+  function classifyFinish(outcome) {
+    if (outcome === "draw") return "spin";
+    const loser = outcome === "player" ? opponent : player;
+    const winner = outcome === "player" ? player : opponent;
+    if (loser.burst) return "burst";
+    const outside = distance(loser.x, loser.y, stadium.cx, stadium.cy) > stadium.r;
+    if (outside) {
+      // a ring-out delivered while the attacker is riding / just released the
+      // Xtreme rail (or mid-special) is an Xtreme Finish.
+      const xtreme = winner.railed || (winner.dashCd ?? 0) > 0 || winner.special;
+      return xtreme ? "xtreme" : "over";
+    }
+    return "spin";
+  }
+
+  function finishRound(outcome, finish) {
     phase = "done";
     cancelAnimationFrame(raf);
     sfx.stopSpinHum();
     if (outcome !== "draw") {
-      if (reason === "ringout") sfx.ringOut(); else sfx.spinOut();
+      if (finish === "xtreme") sfx.xtreme();
+      else if (finish === "over") sfx.ringOut();
+      else if (finish === "burst") sfx.ringOut();
+      else sfx.spinOut();
     }
     launchEl.disabled = true;
     specialEl.disabled = true;
     specialEl.classList.remove("ready");
 
-    match = recordRound(match, outcome);
+    match = recordRound(match, outcome, finish);
     updateMeters();
     renderScore();
 
-    // Award points: +1 for winning the round, +3 more if it clinched the match.
+    // Award ★: the finish's point value when the player scored it, plus a
+    // bonus on the clinching win.
     const matchWon = match.matchOver && match.matchWinner === "player";
-    const earned = pointsForRound(outcome === "player", matchWon);
+    const earned = shopPointsForFinish(outcome, FINISH_POINTS[finish] ?? 0, matchWon);
     if (earned > 0 && typeof opts.awardPoints === "function") opts.awardPoints(earned);
 
     if (outcome === "draw") {
@@ -429,9 +449,10 @@ export function mountArena(opts) {
       return;
     }
 
-    triggerShake(reason === "ringout" ? "lg" : "md");
-    if (reason === "ringout") { spawnBurst(stadium.cx, stadium.cy, "#ff2bd6"); draw(); }
-    showBanner(reason === "ringout" ? biHtml("arena.ringout") : biHtml("arena.spinout"));
+    const big = finish === "over" || finish === "xtreme" || finish === "burst";
+    triggerShake(big ? "lg" : "md");
+    if (big) { spawnBurst(stadium.cx, stadium.cy, "#ff2bd6"); draw(); }
+    showBanner(biHtml("arena.finish." + finish));
 
     bannerTimer = setTimeout(() => {
       if (match.matchOver) {

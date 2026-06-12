@@ -3,13 +3,22 @@
 import { MENU } from "./data.js";
 import { addItem, setQty, cartCount, cartSubtotal, saveCart, loadCart } from "./cart.js";
 import { loadPoints, savePoints, canAfford, spend } from "./points.js";
+import { loadTray, saveTray, addPieces, eatPiece, trayCount } from "./tray.js";
 import { biHtml, phraseHtml, applyI18n, initSpeech } from "./i18n.js";
 import { mountArena } from "./arena.js";
 import { mountBuilder } from "./builder.js";
+import * as sfx from "./sound.js";
 
 let cart = loadCart();
 let points = loadPoints();
+let tray = loadTray();
+let eaten = loadEaten();
 let openBuilder = () => {};   // set in init once the builder is mounted
+
+const EATEN_KEY = "shop.eaten";
+const EAT_MS = 1500;          // hold duration to finish a bite
+function loadEaten() { try { const n = parseInt(localStorage.getItem(EATEN_KEY), 10); return Number.isFinite(n) && n >= 0 ? n : 0; } catch { return 0; } }
+function saveEaten(n) { try { localStorage.setItem(EATEN_KEY, String(n)); } catch { /* ignore */ } }
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -20,6 +29,7 @@ const remaining = () => points - cartSubtotal(cart);
 function renderHud() {
   $("#points-count").textContent = points;
   $("#cart-count").textContent = cartCount(cart);
+  $("#tray-count").textContent = trayCount(tray);
 }
 
 // ---- Menu rendering (affordability + lock) ----
@@ -113,6 +123,7 @@ function renderAll() {
   renderHud();
   renderMenu();
   renderTray();
+  renderTrayDrawer();
 }
 
 // ---- Order drawer open/close ----
@@ -127,12 +138,115 @@ function closeCart() {
   $("#cart-scrim").hidden = true;
 }
 
+// ---- Tray drawer (owned food) ----
+function openTray() {
+  $("#tray-drawer").classList.add("open");
+  $("#tray-drawer").setAttribute("aria-hidden", "false");
+  $("#tray-scrim").hidden = false;
+}
+function closeTray() {
+  $("#tray-drawer").classList.remove("open");
+  $("#tray-drawer").setAttribute("aria-hidden", "true");
+  $("#tray-scrim").hidden = true;
+}
+
+function renderTrayDrawer() {
+  $("#eaten-count").textContent = eaten;
+  const lines = $("#tray-lines");
+  if (tray.length === 0) {
+    lines.innerHTML = `<li class="cart-empty">${biHtml("tray.empty")}</li>`;
+    return;
+  }
+  lines.innerHTML = tray.map((p, i) => `
+    <li class="tray-piece" data-i="${i}">
+      <img class="tp-img" src="${p.image ?? ""}" alt="" onerror="this.style.display='none'" />
+      <span class="tp-name">${phraseHtml(p.name)}</span>
+      <span class="eat-fill"></span>
+    </li>`).join("");
+  lines.querySelectorAll(".tray-piece").forEach(bindEat);
+}
+
+// Minecraft-style hold-to-eat: hold to fill, release early to cancel.
+function bindEat(el) {
+  const i = Number(el.dataset.i);
+  const fill = el.querySelector(".eat-fill");
+  let raf = 0, startT = 0, active = false;
+
+  const stop = () => {
+    active = false;
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+    el.classList.remove("eating");
+    fill.style.width = "0%";
+  };
+  const tick = (t) => {
+    if (!active) return;
+    if (!startT) startT = t;
+    const p = Math.min(1, (t - startT) / EAT_MS);
+    fill.style.width = (p * 100) + "%";
+    if (p >= 1) { stop(); finishEat(i, el); return; }
+    raf = requestAnimationFrame(tick);
+  };
+  const begin = (e) => {
+    e.preventDefault();
+    sfx.unlockAudio();
+    active = true; startT = 0;
+    el.classList.add("eating");
+    sfx.crunch();
+    raf = requestAnimationFrame(tick);
+  };
+  el.addEventListener("pointerdown", begin);
+  el.addEventListener("pointerup", stop);
+  el.addEventListener("pointerleave", stop);
+  el.addEventListener("pointercancel", stop);
+}
+
+function finishEat(i, el) {
+  spawnBiteParticles(el);
+  tray = eatPiece(tray, i);
+  saveTray(tray);
+  eaten += 1; saveEaten(eaten);
+  sfx.crunch();
+  flashFlourish();
+  renderHud();
+  renderTrayDrawer();
+}
+
+function spawnBiteParticles(el) {
+  const r = el.getBoundingClientRect();
+  const cx = r.left + 40, cy = r.top + r.height / 2;
+  for (let k = 0; k < 8; k++) {
+    const b = document.createElement("span");
+    b.className = "bite";
+    b.style.left = cx + "px"; b.style.top = cy + "px";
+    const ang = (k / 8) * Math.PI * 2;
+    b.style.setProperty("--bx", Math.cos(ang) * 36 + "px");
+    b.style.setProperty("--by", (Math.sin(ang) * 36 - 10) + "px");
+    document.body.appendChild(b);
+    setTimeout(() => b.remove(), 520);
+  }
+}
+
+function flashFlourish() {
+  const f = $("#eat-flourish");
+  f.innerHTML = biHtml("eat.done");
+  f.hidden = false;
+  f.classList.remove("show");
+  void f.offsetWidth;          // restart the animation
+  f.classList.add("show");
+  setTimeout(() => { f.hidden = true; }, 900);
+}
+
 // ---- Place Order (spend points) ----
 function placeOrder() {
   const total = cartSubtotal(cart);
   if (total === 0 || !canAfford(points, total)) return;
   points = spend(points, total);
   savePoints(points);
+  // the food you bought lands on your tray (with its image) to eat later
+  const pieces = cart.map((l) => ({ id: l.id, name: l.name, image: MENU.find((m) => m.id === l.id)?.image, qty: l.qty }));
+  tray = addPieces(tray, pieces);
+  saveTray(tray);
   cart = [];
   saveCart(cart);
   renderAll();
@@ -221,6 +335,9 @@ function init() {
   $("#cart-close").addEventListener("click", closeCart);
   $("#cart-scrim").addEventListener("click", closeCart);
   $("#checkout").addEventListener("click", placeOrder);
+  $("#tray-toggle").addEventListener("click", openTray);
+  $("#tray-close").addEventListener("click", closeTray);
+  $("#tray-scrim").addEventListener("click", closeTray);
   $("#battle-btn").addEventListener("click", () => builder.open());
   $("#red-button").addEventListener("click", () => builder.open());
   $("#arena-exit").addEventListener("click", arena.close);

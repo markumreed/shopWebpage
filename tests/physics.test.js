@@ -422,3 +422,74 @@ test("resolveCollision: with no atk/def mults, drain stays symmetric (regression
   assert.equal(a2.spin, 45);
   assert.equal(b2.spin, 45);
 });
+
+test("stepBey: higher moment of inertia loses less spin", () => {
+  const light = stepBey(bey({ spin: 100, inertia: 1 }), STADIUM, PARAMS);
+  const heavy = stepBey(bey({ spin: 100, inertia: 2 }), STADIUM, PARAMS);
+  assert.equal(light.spin, 99);     // 100 - 1*1/1
+  assert.equal(heavy.spin, 99.5);   // 100 - 1*1/2
+});
+
+test("stepBey: a low-spin bey precesses — weaker inward pull + wobble advances", () => {
+  const P = { ...PARAMS, wobbleSpin: 50 };
+  const high = stepBey(bey({ x: 40, spin: 100 }), STADIUM, P); // >= wobbleSpin: no precession
+  const low  = stepBey(bey({ x: 40, spin: 10  }), STADIUM, P); // < wobbleSpin: precesses
+  assert.ok(low.vx > high.vx, "precessing bey is pulled toward center less hard");
+  assert.notEqual(low.wobble, 0, "wobble phase advanced while precessing");
+  assert.equal(high.wobble, 0, "no wobble advance above the threshold");
+});
+
+test("stepBey: no precession when wobbleSpin is unset (existing behavior)", () => {
+  const withParam = stepBey(bey({ x: 40, spin: 60 }), STADIUM, { ...PARAMS, wobbleSpin: 50 });
+  const without   = stepBey(bey({ x: 40, spin: 60 }), STADIUM, PARAMS);
+  assert.equal(withParam.vx, without.vx); // spin 60 >= 50 -> identical
+});
+
+test("resolveCollision: opposite-spin contact spin-steals — the gap narrows", () => {
+  const a = bey({ x: 0, y: 0, spin: 90, dir: 1, radius: 10 });
+  const b = bey({ x: 15, y: 0, spin: 30, dir: -1, radius: 10 });
+  const [a2, b2] = resolveCollision(a, b, { ...COLL, oppositeSpinMult: 1, spinSteal: 0.2 });
+  assert.ok(Math.abs(a2.spin - b2.spin) < Math.abs(a.spin - b.spin), "gap narrows");
+  assert.ok(a2.spin >= 0 && b2.spin >= 0, "no negative spin");
+});
+
+test("resolveCollision: same-spin contact does NOT spin-steal", () => {
+  const a = bey({ x: 0, y: 0, spin: 90, dir: 1, radius: 10 });
+  const b = bey({ x: 15, y: 0, spin: 30, dir: 1, radius: 10 });
+  const off = resolveCollision(a, b, { ...COLL, sameSpinMult: 1, spinSteal: 0 });
+  const on  = resolveCollision(a, b, { ...COLL, sameSpinMult: 1, spinSteal: 0.2 });
+  assert.deepEqual([off[0].spin, off[1].spin], [on[0].spin, on[1].spin]);
+});
+
+test("resolveCollision: scrape coupling launches a still opponent tangentially", () => {
+  const a = bey({ x: 0, y: 0, spin: 100, dir: 1, vx: 1, vy: 0, radius: 10 });
+  const b = bey({ x: 15, y: 0, spin: 0, dir: 1, vx: 0, vy: 0, radius: 10 });
+  const [, b2] = resolveCollision(a, b, { ...COLL, scrapeCoupling: 2 });
+  assert.notEqual(b2.vy, 0, "b gains tangential (y) velocity from a's spin");
+});
+
+test("resolveCollision: burst stress past the threshold bursts the bey", () => {
+  const a = bey({ x: 0, y: 0, spin: 100, vx: 0, vy: 0, radius: 10, mass: 1 });
+  const b = bey({ x: 15, y: 0, spin: 100, vx: -30, vy: 0, radius: 10, mass: 1, burstThreshold: 5 });
+  const [, b2] = resolveCollision(a, b, { ...COLL, burstGain: 1 });
+  assert.ok(b2.burstStress >= 5, "stress accumulated");
+  assert.equal(b2.burst, true);
+  assert.equal(b2.alive, false);
+});
+
+test("resolveCollision: no threshold means no burst (default safe)", () => {
+  const a = bey({ x: 0, y: 0, spin: 100, vx: 0, radius: 10 });
+  const b = bey({ x: 15, y: 0, spin: 100, vx: -30, radius: 10 });
+  const [, b2] = resolveCollision(a, b, { ...COLL, burstGain: 1 });
+  assert.ok(!b2.burst, "no threshold -> never bursts");
+});
+
+test("stepBey: burst stress decays slowly when not hit (clamped at 0)", () => {
+  const P = { ...PARAMS, burstDecay: 2 };
+  const a = stepBey(bey({ spin: 100, burstStress: 5 }), STADIUM, P);
+  assert.equal(a.burstStress, 3);                 // 5 - 2
+  const b = stepBey(bey({ spin: 100, burstStress: 1 }), STADIUM, P);
+  assert.equal(b.burstStress, 0);                 // clamped, not negative
+  const c = stepBey(bey({ spin: 100 }), STADIUM, P); // no burstStress field -> none added
+  assert.equal("burstStress" in c, false);
+});
